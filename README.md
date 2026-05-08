@@ -35,7 +35,9 @@ AlgoBugs is a diagnostic benchmark built on **1,000 paired C++ submissions** fro
 | LLaMA 3.3 70B | 17.8% | 20.0% | **21.2%** |
 | Qwen3 Coder 30B | **20.2%** | 17.4% | 19.3% |
 | DeepSeek V3 | 14.2% | 10.8% | 14.5% |
-| GPT-5.1 | 14.6% | 15.1% | — |
+| GPT-5.1 | 14.6% | 15.1% | 20.2%* |
+
+\* GPT-5.1 few-shot run covered 822 pairs (870 attempted; 48 excluded as compile errors or invalid tests).
 
 **FER = bugs exposed / (bugs exposed + not exposed) x 100%.** Compile errors and invalid tests excluded from denominator.
 
@@ -43,7 +45,7 @@ AlgoBugs is a diagnostic benchmark built on **1,000 paired C++ submissions** fro
 - T3 (Off-by-One) and T4 (Wrong Conditional) are the most exposed categories (~25% avg)
 - T1 (Integer Overflow) and T2 (Modular Arithmetic) resist all models (~4–8% avg)
 - Chain-of-thought prompting provides no consistent improvement over zero-shot
-- Few-shot is model-specific: LLaMA and GPT-5.1 benefit; others do not
+- Few-shot helps LLaMA (+3.4 pp) and GPT-5.1 (+5.6 pp); no meaningful effect on the other three models
 
 ---
 
