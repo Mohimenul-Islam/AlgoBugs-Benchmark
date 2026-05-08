@@ -1,4 +1,4 @@
-# AlgoBugs: A Diagnostic Benchmark for LLM Fault-Exposure on Competitive Programming Bugs
+# AlgoBugs: Benchmarking LLMs for Corner Case Test Generation in Competitive Programming
 
 **BSc CSE Final Year Design Project** — Daffodil International University, May 2026  
 **Author:** Mohimenul Islam
@@ -15,10 +15,12 @@ AlgoBugs is a diagnostic benchmark built on **1,000 paired C++ submissions** fro
 
 ## Repository Contents
 
-| Directory | Description |
-|-----------|-------------|
+| File / Directory | Description |
+|------------------|-------------|
 | [`report/`](report/) | Thesis PDF + full LaTeX source |
-| [`dataset/`](dataset/) | 1,000 paired C++ submissions across 40 problems |
+| [`algobugs_dataset.csv`](algobugs_dataset.csv) | Flat CSV of all 1,000 pairs: problem ID, title, URL, difficulty, bug category (T1–T8), natural-language bug description, submission IDs |
+| [`dataset/`](dataset/) | 1,000 paired C++ submissions across 40 problems (zip archives with source code + problem statements) |
+| [`results/`](results/) | Per-model evaluation JSON files (verdict, generated test, outputs) + `summary_table.csv` (FER per model × prompt × category) |
 | [`evaluation-engine/`](evaluation-engine/) | Python pipeline that runs the benchmark |
 | [`chrome-extension/`](chrome-extension/) | Browser tool used to collect the dataset |
 | [`web-showcase/`](web-showcase/) | Interactive results website |
@@ -147,7 +149,7 @@ python3 -m http.server 8080
 
 ## Report
 
-The full thesis report is at [`report/AlgoBugs_Report.pdf`](report/AlgoBugs_Report.pdf).  
+The full thesis report is at [`report/FYDP_Report.pdf`](report/FYDP_Report.pdf).  
 LaTeX source is in [`report/source/`](report/source/).
 
 ---
