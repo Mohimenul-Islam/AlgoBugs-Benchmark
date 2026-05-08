@@ -1,0 +1,103 @@
+\chapter{Introduction}
+
+This chapter presents the research problem that AlgoBugs addresses, the five objectives it pursues, and an overview of the approach taken. It ends with a guide to the structure of the rest of the report.
+
+\section{Introduction}
+
+Large Language Models have become capable programming assistants. The work by Chen et al.\ \cite{chen2021evaluating} established early on that a transformer model pre-trained on GitHub code could solve a meaningful fraction of function-level programming problems. Since then, code-specialist models trained directly on code repositories have pushed further \cite{guo2024deepseek}, and the benchmarks used to track this progress have grown steadily harder: from simple function-completion tasks to full competitive programming rounds \cite{li2022competition, hendrycks2021apps}.
+
+Evaluating these systems has become a problem in its own right. Most code benchmarks today reduce a model's performance to a single number: the fraction of problems solved or the fraction of test cases passed. That number tells us whether a model is capable, not where it fails. A model achieving 25\% on a fault-exposure benchmark may be succeeding on one type of bug while missing another type entirely, and the aggregate rate reveals nothing about this.
+
+The problem is sharpest in targeted fault exposure. TestCase-Eval \cite{yang2025testcase} and TCGBench \cite{cao2025tcgbench} formalised this task: a model receives a problem description and a specific buggy solution, and must produce a single test input that exposes the fault. Both studies found that even state-of-the-art models expose faults on fewer than half the pairs given. Both also report this as one aggregate number. Which categories of bugs are accessible and which are not remains invisible in the results.
+
+\textbf{AlgoBugs} resolves this. Instead of one fault-exposure rate per model, AlgoBugs reports eight, one for each category in a taxonomy designed specifically for competitive programming bugs. A model's output is not a score but a diagnostic profile: T3 (Off-by-One) is manageable, T1 (Integer Overflow) is not, chain-of-thought helps in some places and hurts in others.
+
+\section{Motivation}
+
+Competitive programming bugs have identifiable structural types. Integer overflow occurs when a value exceeds the capacity of its declared data type; a solution using \texttt{int} for a number that can reach $10^{18}$ is a typical example. Off-by-one errors appear when a loop boundary is placed one step too far or one step too short. Greedy algorithm failures arise when a locally optimal choice leads to a globally wrong result. Each type demands a different kind of test input. An overflow bug needs a carefully chosen large number; an off-by-one needs a boundary value; a greedy flaw may need an adversarially constructed case that breaks the greedy assumption.
+
+These differences matter for evaluation. A model might generate boundary values reliably but have no ability to construct inputs that overflow a specific variable. An aggregate fault-exposure rate makes these two scenarios look identical. Practitioners trying to understand model capabilities, or researchers trying to improve them, need a finer picture.
+
+No existing benchmark provides this for competitive programming \cite{yang2025testcase, cao2025tcgbench, dong2024survey}. AlgoBugs fills the gap by applying an eight-category taxonomy to 1,000 real Codeforces submission pairs and evaluating five LLMs across this taxonomy under zero-shot and chain-of-thought prompting.
+
+\section{Objectives}
+
+The primary objectives of this research are:
+
+\begin{enumerate}
+    \item \textbf{Benchmark Construction:} Design and build AlgoBugs, a 1,000-pair benchmark of C++ competitive programming submissions drawn from 40 Codeforces problems, stratified across eight difficulty brackets from rating 1400 to 2100.
+
+    \item \textbf{Taxonomic Classification:} Develop a novel eight-category bug taxonomy (T1 to T8) that partitions competitive programming bugs into diagnostically distinct categories, each with sufficient sample depth for per-category analysis.
+
+    \item \textbf{Dataset Curation:} Build an execution-validated data collection pipeline using a custom web scraping tool, manual expert review, and an inter-rater reliability study, confirming that each pair in the benchmark captures a single identifiable logical fault.
+
+    \item \textbf{Diagnostic Evaluation:} Evaluate five LLMs under zero-shot, chain-of-thought, and few-shot prompting, computing per-category Fault Exposure Rates to produce a diagnostic profile for each model across the eight bug categories.
+
+    \item \textbf{Open Reproducible Framework:} Release the dataset, evaluation engine, and structured results to allow the research community to evaluate future models and extend the benchmark to new programming languages.
+\end{enumerate}
+
+\section{Methodology}
+
+The AlgoBugs project proceeded in two phases: dataset construction and experimental evaluation.
+
+For dataset construction, a Chrome extension was built to scrape Codeforces submission histories and identify pairs where the same user submitted a Wrong Answer solution followed by an Accepted solution on the same problem. The raw pairs were filtered by compilation check and manually reviewed to confirm each pair captures a single, clearly identifiable logical flaw. A bug taxonomy was designed from common competitive programming failure modes, and each pair was labelled under it. Taxonomic consistency was measured through an inter-rater reliability study in which an independent LLM re-labelled a stratified 200-pair sample and Cohen's Kappa was computed.
+
+For experimental evaluation, five LLMs were queried via the OpenRouter API under three prompt strategies: zero-shot, which provides the problem statement and buggy solution directly; chain-of-thought, which instructs the model to reason about the bug before generating a test; and few-shot, which prepends three synthetic worked examples (one each for T1, T3, and T4 bugs) to demonstrate fault-targeting reasoning. Each generated test was evaluated locally by compiling both the correct and buggy solutions with \texttt{g++ -std=c++20 -O2} and running them on the generated input. If the two solutions produced different outputs, the fault was counted as exposed. The Fault Exposure Rate for each model-prompt-category combination was derived from these execution verdicts.
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+    node distance=0.5cm and 1.6cm,
+    strat/.style={rectangle, rounded corners=4pt, draw=black!70, fill=blue!10,
+                  text width=3.0cm, align=center, font=\small, minimum height=1.0cm, inner sep=5pt},
+    res/.style={rectangle, rounded corners=3pt, draw=black!50, fill=gray!12,
+                text width=3.0cm, align=center, font=\footnotesize, minimum height=0.7cm, inner sep=4pt},
+    arr/.style={->, >=Stealth, thick, draw=black!55}
+]
+\node[strat] (zs)  {Zero-Shot\\{\footnotesize Problem + buggy code}};
+\node[strat, right=of zs] (cot) {Chain-of-Thought\\{\footnotesize + step-by-step reasoning}};
+\node[strat, right=of cot] (fs)  {Few-Shot\\{\footnotesize + 3 worked examples}};
+
+\node[res, below=0.7cm of zs]  (rzs)  {Baseline FER\\per category};
+\node[res, below=0.7cm of cot] (rcot) {Reasoning scaffold\\effect on FER};
+\node[res, below=0.7cm of fs]  (rfs)  {Example-guided\\FER improvement};
+
+\draw[arr] (zs)  -- (rzs);
+\draw[arr] (cot) -- (rcot);
+\draw[arr] (fs)  -- (rfs);
+\end{tikzpicture}
+\caption{Experimental design: three prompting strategies applied to all five models across 1,000 pairs, producing per-category FER profiles for each strategy.}
+\label{fig:exp_design}
+\end{figure}
+
+\section{Project Outcome}
+
+This research delivers five main outcomes:
+
+\begin{enumerate}
+    \item \textbf{The AlgoBugs Taxonomy:} A novel eight-category classification of C++ competitive programming bugs (T1: Integer Overflow, T2: Modular Arithmetic, T3: Off-by-One, T4: Wrong Conditional, T5: Algorithmic Flaw, T6: State/Initialization, T7: Corner Case, T8: I/O Format), validated through inter-rater reliability analysis.
+
+    \item \textbf{The AlgoBugs Dataset:} A curated, execution-ready benchmark of 1,000 paired C++ submissions across 40 Codeforces problems and eight difficulty brackets, each pair verified for compilability, differential correctness, and the single-fault property.
+
+    \item \textbf{The Evaluation Framework:} A reproducible evaluation engine implementing the Fault Exposure Rate metric, local \texttt{g++} differential testing, resume-capable batch evaluation over 1,000 pairs, and structured JSON result logging.
+
+    \item \textbf{Diagnostic Profiles:} Per-category FER results for five LLMs under both prompting strategies, showing where each model succeeds and fails across the eight bug categories.
+
+    \item \textbf{Empirical Insights:} Evidence that current LLMs generate specification-valid test inputs rather than fault-targeting ones. Chain-of-thought prompting does not consistently improve fault-exposure performance across models or categories. Few-shot prompting improves FER for some models (LLaMA: $+3.4$pp, GPT-5.1: $+5.6$pp) but not others, indicating model-specific sensitivity to task demonstrations rather than a general benefit.
+\end{enumerate}
+
+\section{Organization of the Report}
+
+\begin{itemize}
+    \item \textbf{Chapter 1: Introduction} establishes the research problem, presents the five objectives, and outlines the methodology and outcomes of AlgoBugs.
+
+    \item \textbf{Chapter 2: Background and Literature Review} surveys LLMs in software engineering, reviews existing code evaluation benchmarks, examines targeted fault exposure work, and reviews competitive programming bug taxonomy systems. A gap analysis at the end positions AlgoBugs relative to prior work.
+
+    \item \textbf{Chapter 3: Research Methodology} details the benchmark construction pipeline: the web scraping tool, preprocessing, the eight-category taxonomy with formal definitions, and the execution-based evaluation protocol including the FER metric formulation.
+
+    \item \textbf{Chapter 4: Implementation and Experimental Results} presents dataset statistics, model selection rationale, prompt engineering decisions, and per-category FER results across all five evaluated models under three prompting strategies (zero-shot, chain-of-thought, and few-shot).
+
+    \item \textbf{Chapter 5: Engineering Standards and Design Challenges} covers the software engineering standards applied, reproducibility measures, ethical considerations, and the operational challenges encountered during the evaluation phase.
+
+    \item \textbf{Chapter 6: Conclusion and Future Work} summarises the key findings and contributions, discusses the limitations of the current evaluation scope, and outlines future directions for dataset expansion, few-shot prompting experiments, and public release.
+\end{itemize}

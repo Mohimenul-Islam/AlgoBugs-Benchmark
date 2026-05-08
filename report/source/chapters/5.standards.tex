@@ -1,0 +1,203 @@
+\chapter{Engineering Standards and Design Challenges}
+
+This chapter covers the engineering standards applied in AlgoBugs, the societal and environmental context of the work, the project cost structure, and the Complex Engineering Problem and Complex Engineering Activities mappings required for accreditation under BAETE/Washington Accord standards.
+
+\section{Compliance with the Standards}
+
+Only the standards directly relevant to the AlgoBugs pipeline are discussed. For each standard, the specific choice is justified against considered alternatives.
+
+\subsection{Software Standards}
+
+\textbf{C++ Compilation Standard.} All solutions in the dataset are compiled using \texttt{g++ -std=c++20 -O2}. The C++20 standard was chosen over C++14 or C++17 because Codeforces judges use C++20 for problems published after 2021, and using an older standard would reject submissions that use ranges, structured bindings, or \texttt{std::format}, producing false compile errors. The \texttt{-O2} flag matches the Codeforces judge optimisation level so timing behaviour is consistent with the original submission verdicts.
+
+\textbf{Python Style.} The evaluation engine (\texttt{evaluate\_models.py}) follows PEP 8 conventions. Asynchronous concurrency is implemented via the \texttt{asyncio} standard library rather than threading, because async I/O eliminates thread-safety concerns for the shared rate-limiter state and provides cleaner cancellation semantics. The \texttt{pathlib} module is used throughout for platform-independent path handling.
+
+\textbf{JSON Result Schema.} All evaluation results are persisted in newline-delimited JSON, with one object per pair containing: \texttt{problem\_id}, \texttt{pair\_id}, \texttt{bug\_category}, \texttt{verdict}, \texttt{generated\_test}, \texttt{correct\_output}, \texttt{buggy\_output}, and \texttt{api\_response\_time}. A fixed schema ensures downstream analysis scripts can process results from any model run without format-specific parsing.
+
+\textbf{Data Quality Protocol.} Each pair admitted to the benchmark must satisfy four conditions: (1) both solutions compile under \texttt{g++ -std=c++20 -O2}; (2) the correct and buggy solutions produce different output on at least one input; (3) manual review confirms the bug is a single identifiable logical fault; (4) the source problem was published after January 2021 to reduce overlap with LLM training data.
+
+\textbf{IRR Validation.} Taxonomic labels were validated through an inter-rater reliability (IRR) study. An independent LLM (Qwen 2.5 72B Instruct) re-labelled a stratified random sample of 200 pairs (25 per difficulty bracket). Cohen's Kappa $\kappa \geq 0.70$ was required to confirm the taxonomy categories are sufficiently well-defined for consistent application.
+
+\subsection{Hardware Standards}
+
+AlgoBugs was developed and evaluated on a personal Linux workstation (Ubuntu 22.04 LTS, Intel Core i5, 16 GB RAM). This hardware was sufficient for all local operations: running the Python evaluation engine, executing g++ compilation, and logging results. No GPU was required because all LLM inference is handled remotely via the OpenRouter API; the local machine processes only text and executes short-running compiled binaries.
+
+An alternative considered was renting cloud compute (e.g., AWS EC2) for the evaluation runs. This was rejected on cost grounds: the evaluation engine's bottleneck is API rate limits, not local CPU, so cloud compute would provide no throughput improvement. Running locally also simplified checkpoint management, as the result JSON files do not need to be synced to remote storage between restarts.
+
+\subsection{Communication Standards}
+
+All LLM calls use the OpenRouter REST API, which exposes an OpenAI-compatible endpoint (\texttt{https://openrouter.ai/api/v1/chat/completions}). The standard HTTP/JSON message format is:
+
+\begin{itemize}
+    \item \textbf{Request:} JSON body with \texttt{model}, \texttt{messages} (array of role/content pairs), and \texttt{max\_tokens}
+    \item \textbf{Authentication:} Bearer token in the \texttt{Authorization} header
+    \item \textbf{Response:} JSON with \texttt{choices[0].message.content} containing the model output
+    \item \textbf{Retry policy:} Exponential backoff (base 2 seconds) on HTTP 429 and 5xx responses; circuit breaker after 5 consecutive failures
+\end{itemize}
+
+The OpenAI-compatible format was preferred over provider-specific SDKs (Google Vertex AI SDK, Anthropic SDK) because it allows the same Python code to call all five models by changing only the \texttt{model} parameter string.
+
+\section{Impact on Society, Environment and Sustainability}
+
+\subsection{Impact on Life}
+
+AlgoBugs provides the first diagnostic profile of LLM fault-exposure capability across structured bug categories. This has direct relevance to software reliability: developers who use LLM assistants for debugging now have evidence-based guidance on which types of bugs those tools can reliably surface and which they cannot. A practitioner using GPT-5.1 for code review, for instance, should be aware that T1 (Integer Overflow) bugs have a 3.3\% exposure rate under zero-shot prompting and should apply additional scrutiny to arithmetic-heavy code sections.
+
+Beyond immediate practice, results like these contribute to a more accurate public understanding of LLM capabilities. Overstated claims about LLM debugging ability carry real risk: developers may reduce their own review effort based on assumed model competence. AlgoBugs provides a quantitative counterpoint.
+
+\subsection{Impact on Society \& Environment}
+
+LLM inference carries an energy cost. Over the course of 15 evaluation runs (5 models $\times$ 3 strategies, approximately 14,000 total API calls), inference was conducted through OpenRouter's shared infrastructure rather than dedicated model servers. Shared cloud infrastructure is generally more energy-efficient per request than provisioning dedicated capacity, because utilisation rates are higher.
+
+The dataset itself uses no external sensors, no human participants, and no physical infrastructure. All data originates from publicly available Codeforces submissions, so there is no marginal environmental cost for data collection beyond the web requests made by the Chrome scraper.
+
+\subsection{Ethical Aspects}
+
+All data originates from publicly available Codeforces submissions. Codeforces makes accepted and wrong-answer submissions publicly accessible after the contest period. No personally identifiable information was retained: usernames and account details are stripped at collection time; only source code and problem metadata are stored.
+
+The IRR study uses an LLM as a secondary annotator. This use is fully disclosed in the methodology chapter. The primary labels were assigned by the human researcher; the LLM served only as a cross-check to quantify label consistency. No model output is presented as ground truth.
+
+AlgoBugs is intended for academic evaluation only. The benchmark results are not proposed as a certification mechanism for LLMs in production, and the dataset is designed for controlled comparison, not adversarial misuse.
+
+\subsection{Sustainability Plan}
+
+The AlgoBugs pipeline is designed for long-term extension:
+
+\begin{itemize}
+    \item \textbf{Dataset versioning:} The 1,000-pair dataset is stored as structured zip files with consistent metadata schemas, making addition of new problems straightforward without modifying existing pairs.
+    \item \textbf{Model-agnostic engine:} Adding a new model requires only adding a new entry to the model configuration dictionary; no pipeline code changes are needed.
+    \item \textbf{Taxonomy extension:} New bug categories can be added by extending the \texttt{metadata.json} schema and re-running IRR validation on the new category.
+    \item \textbf{Planned open-source release:} The dataset and evaluation engine are planned for release on HuggingFace (dataset) and GitHub (engine), enabling the research community to evaluate new models as they are released and extend coverage to additional programming languages.
+\end{itemize}
+
+\section{Project Management and Financial Analysis}
+
+Table 5.1 presents the cost breakdown for the AlgoBugs project. Development was conducted on personal hardware with open-source software, so the only variable cost was LLM API usage through OpenRouter.
+
+\begin{table}[h!]
+    \centering
+    \caption{Project Cost Breakdown}
+    \label{tab:cost}
+    {\setlength{\tabcolsep}{8pt}%
+    \begin{tabularx}{\linewidth}{lrX}
+        \toprule
+        \textbf{Resource} & \textbf{Cost (USD)} & \textbf{Notes} \\
+        \midrule
+        \rowcolor{gray!10}
+        OpenRouter API credits & \$22--25 & 15 evaluation runs (5 models $\times$ 3 strategies); approximately 14,000 total API calls; cost varies by model tier \\
+        Personal workstation & \$0 & Existing Linux hardware; no incremental cost \\
+        \rowcolor{gray!10}
+        Python / g++ / Linux toolchain & \$0 & Open-source software stack; no licensing fees \\
+        Codeforces data access & \$0 & Public contest submissions; no API fees \\
+        \midrule
+        \textbf{Total} & \textbf{\$22--25} & Entire project variable cost is API credits only \\
+        \bottomrule
+    \end{tabularx}}
+\end{table}
+
+\textbf{Alternate budget analysis.} If the same evaluation had been run using direct provider APIs (OpenAI, Google Cloud Vertex AI, Anthropic, Meta, Alibaba) with separate accounts and billing, the cost would have been approximately 2.5--3$\times$ higher due to: (1) absence of OpenRouter's consolidated volume discounts; (2) per-provider minimum credit requirements; and (3) separate per-request overhead charges. OpenRouter consolidation reduced cost and reduced credential management complexity from five separate accounts to one.
+
+\textbf{Revenue model.} AlgoBugs is a research contribution; it generates no direct revenue. Its value is academic: citations in related work, reuse of the dataset in follow-on studies, and integration into LLM evaluation leaderboards. The open-source release on HuggingFace and GitHub is planned to maximise this academic impact at zero marginal cost.
+
+\section{Complex Engineering Problem}
+
+Large Language Models have become widely used tools for competitive programming assistance, yet no diagnostic framework existed for evaluating which categories of algorithmic bugs these models can reliably expose. Existing benchmarks reduce performance to a single aggregate score, hiding whether failure stems from data-type reasoning, boundary conditions, or control-flow analysis. AlgoBugs was designed to fill this gap through structured, per-category fault-exposure evaluation.
+
+\noindent\textbf{Project Objectives.} The project aims to: (1) develop a structured taxonomy of competitive programming bugs partitioned by reasoning requirement; (2) curate a 1,000-pair benchmark of real WA and AC submission pairs from Codeforces; (3) build a reproducible execution-based evaluation engine; and (4) evaluate five LLMs under three prompting strategies to produce per-category diagnostic profiles.
+
+\noindent\textbf{Critical Challenges.} Four challenges made the project non-trivial to execute. Taxonomy design required defining mutually exclusive, consistently applicable categories across 1,000 pairs; multiple iterations and an IRR validation study were necessary before categories were stable. Evaluation circularity was a structural risk: using another LLM to judge bug exposure would conflate the judge's own limitations with the model under test; differential testing with a local g++ compiler provides an independent oracle that does not share the models' failure modes. API rate limits required per-model concurrency control across five providers; GPT-5.1 stopped at 870 pairs due to credit exhaustion before the full set was completed. Dataset validity required manual review of all 1,000 pairs because automated diff filters alone cannot distinguish single logical faults from multi-line refactors.
+
+\noindent\textbf{Conflicting Requirements.} High benchmark diversity (rating 1400--2100) conflicts with consistent per-category sample sizes. Fully automated evaluation enables scale but requires IRR validation to preserve annotation quality. Complete model coverage conflicted with the available API credit budget, requiring an explicit trade-off.
+
+\subsection{Complex Problem Solving}
+
+Table 5.2 maps AlgoBugs to the seven Engineering Problem attributes (EP1--EP7). EP1 is mandatory; EP2, EP3, EP4, and EP7 are selected based on genuine project characteristics.
+
+\begin{table}[h!]
+    \centering
+    \caption{Mapping with Complex Engineering Problem}
+    \label{tab:ep_mapping}
+    {\setlength{\tabcolsep}{3pt}\renewcommand{\arraystretch}{1.8}%
+    \begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|}
+        \hline
+        \makecell[c]{\textbf{EP1}\\\scriptsize Depth of\\\scriptsize Knowledge\\\scriptsize Required} &
+        \makecell[c]{\textbf{EP2}\\\scriptsize Range of\\\scriptsize Conflicting\\\scriptsize Requirements} &
+        \makecell[c]{\textbf{EP3}\\\scriptsize Depth of\\\scriptsize Analysis\\\scriptsize Required} &
+        \makecell[c]{\textbf{EP4}\\\scriptsize Familiarity\\\scriptsize of Issues} &
+        \makecell[c]{\textbf{EP5}\\\scriptsize Extent of\\\scriptsize Applicable\\\scriptsize Codes} &
+        \makecell[c]{\textbf{EP6}\\\scriptsize Extent of\\\scriptsize Stakeholder\\\scriptsize Involvement} &
+        \makecell[c]{\textbf{EP7}\\\scriptsize Interdependence} \\
+        \hline
+        $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & & & $\checkmark$ \\
+        \hline
+    \end{tabularx}}
+\end{table}
+
+\textbf{EP1: Depth of Knowledge Required.} AlgoBugs requires K3 (engineering fundamentals: differential testing theory, software fault models, C++ compilation), K4 (specialist knowledge: LLM prompting strategies, competitive programming algorithm patterns, benchmark design), K5 (engineering design: asynchronous pipeline architecture with checkpoint recovery), K6 (engineering practice: Python asyncio, API integration, g++ subprocess management), and K8 (research literature: LLM evaluation surveys, IRR methodology, competitive programming corpus construction).
+
+\textbf{EP2: Range of Conflicting Requirements.} Broad difficulty coverage (1400--2100) versus consistent per-category sample size; automated LLM evaluation versus manual annotation quality (resolved via IRR study); complete model coverage versus API credit budget (GPT-5.1 limited to 870 pairs). These requirements cannot all be simultaneously satisfied and required explicit trade-off decisions.
+
+\textbf{EP3: Depth of Analysis Required.} No standard method existed for evaluating LLM fault-exposure on algorithmically diverse bugs. Taxonomy design required choosing between feature-based and ability-based classification. Differential testing was selected over LLM-as-judge to avoid evaluation circularity, a risk not addressed in prior benchmark literature.
+
+\textbf{EP4: Familiarity of Issues.} The intersection of competitive programming, adversarial test generation, and LLM diagnostic evaluation is not covered in standard CSE curriculum. No established benchmark existed for this capability; the relevant literature spans three separate fields (software testing, LLM evaluation, competitive programming), none of which fully addresses the combined problem.
+
+\textbf{EP7: Interdependence.} AlgoBugs has multiple tightly interdependent subsystems: Chrome scraper, taxonomy annotation framework, IRR validation protocol, asyncio evaluation engine, OpenRouter API layer, g++ compilation pipeline, differential testing oracle, checkpoint/resume system, and statistical analysis layer. A defect in any one component propagates to benchmark validity.
+
+Table 5.3 maps AlgoBugs to the eight Knowledge Profile codes. EP1 is attained through K3, K4, K5, K6, and K8.
+
+\begin{table}[h!]
+    \centering
+    \caption{Mapping with Knowledge Profile}
+    \label{tab:k_mapping}
+    {\setlength{\tabcolsep}{3pt}\renewcommand{\arraystretch}{1.8}%
+    \begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|}
+        \hline
+        \makecell[c]{\textbf{K1}\\\scriptsize Natural\\\scriptsize Science} &
+        \makecell[c]{\textbf{K2}\\\scriptsize Mathematics} &
+        \makecell[c]{\textbf{K3}\\\scriptsize Engineering\\\scriptsize Fundamentals} &
+        \makecell[c]{\textbf{K4}\\\scriptsize Specialist\\\scriptsize Knowledge} &
+        \makecell[c]{\textbf{K5}\\\scriptsize Engineering\\\scriptsize Design} &
+        \makecell[c]{\textbf{K6}\\\scriptsize Engineering\\\scriptsize Practice} &
+        \makecell[c]{\textbf{K7}\\\scriptsize Comprehension} &
+        \makecell[c]{\textbf{K8}\\\scriptsize Research\\\scriptsize Literature} \\
+        \hline
+         & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & & $\checkmark$ \\
+        \hline
+    \end{tabularx}}
+\end{table}
+
+K2 (Mathematics) is required for the FER formula, Cohen's Kappa, and per-category statistical comparison. K3 (Engineering Fundamentals) underpins the differential testing oracle and C++ compilation pipeline. K4 (Specialist Knowledge) covers LLM prompting theory and competitive programming algorithm taxonomy. K5 (Engineering Design) applies to the async pipeline architecture and checkpoint system design. K6 (Engineering Practice) is required for the Python asyncio implementation and API integration. K8 (Research Literature) was applied throughout taxonomy design and benchmark construction.
+
+\subsection{Engineering Activities}
+
+Table 5.4 maps AlgoBugs to the five Complex Engineering Activity attributes (EA1--EA5). EA1, EA2, EA3, and EA5 are selected; EA4 is not selected as the project has limited direct societal consequences beyond academic research.
+
+\begin{table}[h!]
+    \centering
+    \caption{Mapping with Complex Engineering Activities}
+    \label{tab:ea_mapping}
+    {\setlength{\tabcolsep}{3pt}\renewcommand{\arraystretch}{1.8}%
+    \begin{tabularx}{\linewidth}{|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|}
+        \hline
+        \makecell[c]{\textbf{EA1}\\\scriptsize Range of\\\scriptsize Resources} &
+        \makecell[c]{\textbf{EA2}\\\scriptsize Level of\\\scriptsize Interaction} &
+        \makecell[c]{\textbf{EA3}\\\scriptsize Innovation} &
+        \makecell[c]{\textbf{EA4}\\\scriptsize Consequences for\\\scriptsize Society \&\\\scriptsize Environment} &
+        \makecell[c]{\textbf{EA5}\\\scriptsize Familiarity} \\
+        \hline
+        $\checkmark$ & $\checkmark$ & $\checkmark$ & & $\checkmark$ \\
+        \hline
+    \end{tabularx}}
+\end{table}
+
+\textbf{EA1: Range of Resources.} The project required diverse engineering resources: the Python 3.10 runtime (software), a Linux workstation (hardware), the OpenRouter API with a credit-based compute budget (cloud infrastructure), 1,000 Codeforces C++ submissions (data), the g++ compiler toolchain, and specialist domain knowledge spanning LLM evaluation, software testing, and competitive programming algorithms.
+
+\textbf{EA2: Level of Interaction.} Significant interaction challenges arose between the asynchronous evaluation engine and five LLM API endpoints, each with different rate-limit policies, response formats, and credit structures. Concurrent g++ compilations required process isolation to prevent output interference. Taxonomy annotation required iterative interaction between human labels and IRR cross-validation to resolve boundary cases between closely related categories (e.g., T3 vs. T7).
+
+\textbf{EA3: Innovation.} AlgoBugs introduces a diagnostic evaluation modality not present in prior LLM benchmarking work. Rather than measuring pass/fail on standard coding problems, it measures fault-targeted test generation capability across a structured bug taxonomy using differential execution. The T1--T8 taxonomy, per-category FER metric, and execution-based evaluation design are original engineering contributions.
+
+\textbf{EA5: Familiarity.} The project applies differential testing principles from software engineering to the novel problem of measuring LLM adversarial reasoning capability. This combination extends beyond the standard CSE curriculum and established engineering practice. No prior published framework addresses fault-exposure benchmarking for LLMs on competitive programming submissions.
+
+\section{Summary}
+
+This chapter documented the engineering standards, societal context, financial structure, and complex engineering classification of AlgoBugs. Software standards (C++20, Python PEP8, OpenAI-compatible REST) were selected over alternatives with explicit justification for each choice. The project's impact on life, society, and sustainability is positive and limited in scope. Total project cost was approximately \$22--25 in API credits. The CEP mapping identified EP1, EP2, EP3, EP4, and EP7 as applicable attributes, confirmed by the Knowledge Profile mapping to K2, K3, K4, K5, K6, and K8. The CEA mapping identified EA1, EA2, EA3, and EA5. Detailed justifications for each selected attribute are provided in the subsections above.

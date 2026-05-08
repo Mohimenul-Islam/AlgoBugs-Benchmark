@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoBugs — LLM Fault-Exposure Benchmark</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-one-dark.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+<style>
+:root {
+  --bg:       #06090f;
+  --bg2:      #0c1220;
+  --bg3:      #111d2e;
+  --surface:  #0f1929;
+  --surface2: #162035;
+  --border:   rgba(148,163,184,0.09);
+  --border2:  rgba(148,163,184,0.18);
+  --text:     #f1f5f9;
+  --text2:    #94a3b8;
+  --text3:    #475569;
+  --indigo:   #6366f1;
+  --indigo2:  #818cf8;
+  --blue:     #3b82f6;
+  --blue2:    #60a5fa;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --amber:    #f59e0b;
+  --purple:   #a855f7;
+  --r: 10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:300;height:54px;
+    display:flex;align-items:center;padding:0 40px;gap:6px;
+    background:rgba(6,9,15,0.8);backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border)}
+.nav-logo{font-weight:800;font-size:1rem;letter-spacing:-0.3px;
+          background:linear-gradient(135deg,var(--indigo2),var(--blue2));
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:auto}
+nav a{color:var(--text2);text-decoration:none;padding:6px 14px;border-radius:7px;
+      font-size:0.83rem;font-weight:500;transition:all 0.18s;letter-spacing:0.1px}
+nav a:hover{color:var(--text);background:rgba(255,255,255,0.05)}
+nav a.active{color:var(--text);background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2)}
+
+/* ── SECTIONS ── */
+.section-inner{max-width:1160px;margin:0 auto;padding:96px 48px 72px}
+h2.section-title{font-size:1.8rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
+.section-sub{color:var(--text2);font-size:0.9rem;line-height:1.65;margin-bottom:40px;max-width:680px}
+.section-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;
+               background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);
+               color:var(--indigo2);font-size:0.73rem;font-weight:600;letter-spacing:0.8px;
+               text-transform:uppercase;margin-bottom:16px}
+
+/* ── HERO ── */
+#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;
+      text-align:center;position:relative;overflow:hidden;
+      background:var(--bg)}
+#hero::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 20% 30%,rgba(99,102,241,0.12) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 50% at 80% 70%,rgba(59,130,246,0.08) 0%,transparent 55%),
+             radial-gradient(ellipse 40% 40% at 55% 15%,rgba(168,85,247,0.07) 0%,transparent 50%)}
+#hero::after{content:'';position:absolute;inset:0;opacity:0.4;
+  background-image:radial-gradient(rgba(148,163,184,0.06) 1px,transparent 1px);
+  background-size:32px 32px}
+.hero-inner{position:relative;z-index:1;padding:100px 32px 60px;max-width:860px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:30px;
+            border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.08);
+            color:var(--indigo2);font-size:0.73rem;font-weight:600;letter-spacing:1px;
+            text-transform:uppercase;margin-bottom:28px}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--indigo2);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.85)}}
+.hero-title{font-size:clamp(3.2rem,8vw,6.5rem);font-weight:900;line-height:1.0;letter-spacing:-2px;margin-bottom:20px;
+            background:linear-gradient(135deg,#f1f5f9 20%,#a5b4fc 60%,#818cf8 100%);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{color:var(--text2);font-size:1.05rem;line-height:1.7;max-width:580px;margin:0 auto 48px}
+.counters{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:48px}
+.counter-card{background:rgba(15,25,41,0.7);border:1px solid var(--border2);border-radius:14px;
+              padding:22px 28px;min-width:130px;backdrop-filter:blur(12px);
+              transition:border-color 0.2s,transform 0.2s}
+.counter-card:hover{border-color:rgba(99,102,241,0.35);transform:translateY(-3px)}
+.counter-num{font-size:2.2rem;font-weight:800;letter-spacing:-1px;display:block;
+             background:linear-gradient(135deg,var(--text),var(--indigo2));
+             -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.counter-lbl{color:var(--text2);font-size:0.78rem;font-weight:500;margin-top:6px;letter-spacing:0.3px}
+.hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-grad{display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:10px;
+          background:linear-gradient(135deg,var(--indigo),#7c3aed);color:#fff;
+          font-size:0.9rem;font-weight:600;text-decoration:none;border:none;cursor:pointer;
+          transition:all 0.2s;box-shadow:0 4px 24px rgba(99,102,241,0.3)}
+.btn-grad:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(99,102,241,0.4)}
+.btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:10px;
+           background:rgba(255,255,255,0.04);color:var(--text);text-decoration:none;
+           font-size:0.9rem;font-weight:600;border:1px solid var(--border2);cursor:pointer;
+           transition:all 0.2s}
+.btn-ghost:hover{background:rgba(255,255,255,0.07);border-color:var(--border2);transform:translateY(-2px)}
+.hero-footer{margin-top:52px;color:var(--text3);font-size:0.78rem;letter-spacing:0.3px}
+
+/* ── DASHBOARD ── */
+#dashboard{background:var(--bg)}
+.tab-bar{display:flex;gap:3px;background:var(--surface);border-radius:12px;
+         padding:4px;margin-bottom:36px;width:fit-content;border:1px solid var(--border)}
+.tab-btn{padding:9px 22px;border:none;border-radius:9px;background:transparent;
+         color:var(--text2);font-size:0.85rem;font-weight:500;cursor:pointer;
+         transition:all 0.18s;font-family:'Inter',sans-serif;letter-spacing:0.1px}
+.tab-btn.active{background:rgba(99,102,241,0.15);color:var(--indigo2);font-weight:600;
+                border:1px solid rgba(99,102,241,0.2)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px}
+.card-title{font-size:0.75rem;font-weight:600;color:var(--text3);text-transform:uppercase;
+            letter-spacing:1px;margin-bottom:22px}
+.finding-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+.finding-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+              padding:18px 20px;transition:border-color 0.2s}
+.finding-card:hover{border-color:rgba(99,102,241,0.3)}
+.fc-num{font-size:1.7rem;font-weight:800;letter-spacing:-0.5px;
+        background:linear-gradient(135deg,var(--indigo2),var(--blue2));
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.fc-lbl{font-size:0.8rem;color:var(--text2);margin-top:5px;line-height:1.45}
+
+/* Heatmap */
+.heatmap{border-collapse:separate;border-spacing:3px;min-width:680px;width:100%}
+.heatmap th{font-size:0.68rem;color:var(--text3);padding:4px 3px;text-align:center;font-weight:600;letter-spacing:0.2px}
+.heatmap th.row-h{text-align:right;padding-right:14px;min-width:100px;font-size:0.78rem;color:var(--text2)}
+.heatmap td{text-align:center;padding:10px 4px;font-size:0.77rem;font-weight:700;border-radius:7px}
+.hm-legend{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:0.73rem;color:var(--text3)}
+.hm-legend-bar{width:140px;height:8px;border-radius:4px;
+  background:linear-gradient(90deg,#0f172a,#312e81)}
+
+/* ── DATASET ── */
+#dataset{background:var(--bg2)}
+.browser-layout{display:grid;grid-template-columns:220px 1fr;gap:22px;align-items:start}
+.filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+              padding:20px;position:sticky;top:66px}
+.filter-label{font-size:0.72rem;font-weight:600;color:var(--text3);text-transform:uppercase;
+              letter-spacing:0.8px;margin-bottom:10px;display:block}
+.filter-group{margin-bottom:20px}
+.toggle-row{display:flex;flex-wrap:wrap;gap:5px}
+.rtoggle{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;
+         color:var(--text3);font-size:0.73rem;font-weight:600;cursor:pointer;transition:all 0.15s;
+         font-family:'Inter',sans-serif}
+.rtoggle.on{border-color:rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:var(--indigo2)}
+.cat-row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;
+         font-size:0.8rem;color:var(--text2);user-select:none}
+.cat-row input{accent-color:var(--indigo)}
+.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.vis-count{font-size:1.5rem;font-weight:800;letter-spacing:-0.5px;
+           background:linear-gradient(135deg,var(--text),var(--text2));
+           -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.vis-sub{font-size:0.72rem;color:var(--text3);margin-bottom:18px}
+
+.problem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.problem-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+              cursor:pointer;transition:all 0.2s;overflow:hidden}
+.problem-card:hover{border-color:rgba(99,102,241,0.3);transform:translateY(-2px);
+                    box-shadow:0 8px 32px rgba(0,0,0,0.25)}
+.problem-card.open{border-color:rgba(99,102,241,0.4)}
+.pc-header{padding:16px}
+.pc-name{font-size:0.95rem;font-weight:700;letter-spacing:-0.2px;margin-bottom:8px}
+.pc-meta{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.rating-pill{padding:3px 9px;border-radius:20px;font-size:0.7rem;font-weight:700}
+.pc-count{font-size:0.75rem;color:var(--text3)}
+.pc-cf-link{margin-left:auto;color:var(--blue2);font-size:0.7rem;opacity:0.7;transition:opacity 0.15s}
+.pc-cf-link:hover{opacity:1}
+.catbar{display:flex;height:4px;border-radius:3px;overflow:hidden;gap:1px}
+.catbar-seg{flex:1;opacity:0.25;transition:opacity 0.2s}
+.catbar-seg.has-pairs{opacity:1}
+.pc-body{border-top:1px solid var(--border);overflow:hidden;max-height:0;transition:max-height 0.32s ease}
+.pc-body.open{max-height:700px}
+.pair-row{padding:11px 16px;display:flex;align-items:center;gap:10px;
+          border-bottom:1px solid rgba(148,163,184,0.05);cursor:pointer;
+          transition:background 0.15s}
+.pair-row:hover{background:rgba(99,102,241,0.06)}
+.pair-row:last-child{border-bottom:none}
+.t-pill{padding:3px 8px;border-radius:5px;font-size:0.68rem;font-weight:700;flex-shrink:0}
+.pair-desc{font-size:0.78rem;color:var(--text2);flex:1;min-width:0;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.view-link{font-size:0.72rem;color:var(--indigo2);opacity:0;transition:opacity 0.15s;flex-shrink:0}
+.pair-row:hover .view-link{opacity:1}
+.loading-row{padding:16px;text-align:center;font-size:0.82rem;color:var(--text3)}
+
+/* ── DEMO ── */
+#demo{background:var(--bg)}
+.demo-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:30px}
+.demo-tab{padding:8px 16px;border:1px solid var(--border);border-radius:8px;
+          background:transparent;color:var(--text2);font-size:0.8rem;font-weight:500;
+          cursor:pointer;transition:all 0.18s;font-family:'Inter',sans-serif;
+          display:flex;align-items:center;gap:7px}
+.demo-tab:hover{border-color:var(--border2);color:var(--text);background:rgba(255,255,255,0.03)}
+.demo-tab.active{background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.35);color:var(--indigo2);font-weight:600}
+.cat-dot-sm{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.demo-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.demo-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px}
+.demo-prob-title{font-size:1rem;font-weight:700;letter-spacing:-0.2px;margin-bottom:8px;
+                 display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bug-card{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
+          border-radius:9px;padding:12px 14px;font-size:0.82rem;color:var(--text2);
+          line-height:1.6;margin-bottom:16px}
+.bug-card strong{color:var(--amber)}
+.prob-statement{font-size:0.84rem;color:var(--text2);line-height:1.75;
+                background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+                max-height:220px;overflow-y:auto;
+                white-space:pre-wrap;margin-bottom:14px}
+.read-more-btn{background:none;border:none;color:var(--blue2);font-size:0.77rem;
+               cursor:pointer;padding:0 0 12px;font-family:'Inter',sans-serif}
+.code-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.code-wrap{border-radius:9px;overflow:hidden;border:1px solid var(--border)}
+.code-head{padding:8px 12px;font-size:0.72rem;font-weight:600;display:flex;align-items:center;gap:6px}
+.code-head.buggy{background:rgba(239,68,68,0.1);color:#fca5a5}
+.code-head.correct{background:rgba(34,197,94,0.1);color:#86efac}
+.code-wrap pre{max-height:260px;overflow:auto;margin:0;border-radius:0;font-size:0.71rem}
+.code-wrap pre code{font-size:0.71rem}
+.model-label{font-size:0.78rem;font-weight:600;color:var(--text2);margin-bottom:12px;letter-spacing:0.2px}
+.model-grid{display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+.model-btn{padding:11px 14px;border:1px solid var(--border);border-radius:9px;
+           background:var(--bg2);color:var(--text);font-size:0.85rem;font-weight:500;
+           cursor:pointer;transition:all 0.18s;text-align:left;display:flex;align-items:center;gap:10px;
+           font-family:'Inter',sans-serif}
+.model-btn:hover{border-color:var(--border2);background:var(--surface2)}
+.model-btn.selected{border-color:rgba(99,102,241,0.5);background:rgba(99,102,241,0.1);color:var(--indigo2)}
+.model-icon{width:26px;height:26px;border-radius:7px;background:var(--bg3);display:flex;
+            align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0}
+.run-btn{width:100%;padding:13px;border:none;border-radius:10px;font-family:'Inter',sans-serif;
+         background:linear-gradient(135deg,var(--indigo),#7c3aed);color:#fff;font-size:0.9rem;
+         font-weight:700;cursor:pointer;transition:all 0.2s;
+         box-shadow:0 4px 16px rgba(99,102,241,0.25);display:flex;align-items:center;justify-content:center;gap:8px}
+.run-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(99,102,241,0.4)}
+.run-btn:disabled{background:var(--surface2);color:var(--text3);cursor:not-allowed;transform:none;box-shadow:none}
+.eval-result{margin-top:18px;display:none}
+.loading-steps{display:flex;flex-direction:column;gap:8px;padding:18px;
+               background:var(--bg2);border-radius:10px;border:1px solid var(--border)}
+.lstep{display:flex;align-items:center;gap:10px;font-size:0.8rem;color:var(--text3);transition:color 0.3s}
+.lstep.active{color:var(--text2)}
+.lstep.done{color:var(--green)}
+.lstep-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.lstep-spin{width:13px;height:13px;border:2px solid rgba(255,255,255,0.1);
+            border-top-color:var(--indigo2);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result-card{border-radius:11px;overflow:hidden;border:1px solid var(--border)}
+.verdict-bar{padding:16px 20px;display:flex;align-items:center;gap:12px;font-weight:700;font-size:1.05rem}
+.verdict-bar.exposed{background:rgba(34,197,94,0.12);border-bottom:1px solid rgba(34,197,94,0.2);color:#86efac}
+.verdict-bar.not-exposed{background:rgba(239,68,68,0.1);border-bottom:1px solid rgba(239,68,68,0.18);color:#fca5a5}
+.verdict-bar.error{background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.18);color:#fcd34d}
+.verdict-icon{font-size:1.3rem}
+.verdict-sub{font-size:0.73rem;font-weight:400;opacity:0.8;margin-top:2px}
+.result-body{padding:16px 18px;background:var(--bg2);display:flex;flex-direction:column;gap:12px}
+.r-label{font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:4px}
+.r-code{background:var(--bg);padding:10px 12px;border-radius:7px;font-family:'Consolas','Courier New',monospace;
+        font-size:0.75rem;color:#86efac;white-space:pre-wrap;max-height:100px;overflow:auto;border:1px solid var(--border)}
+.out-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.out-box{background:var(--bg);padding:10px 12px;border-radius:7px;font-family:'Consolas','Courier New',monospace;
+         font-size:0.75rem;border:1px solid var(--border);min-height:44px;white-space:pre-wrap;max-height:80px;overflow:auto}
+.out-box.buggy-out{border-color:rgba(239,68,68,0.2);color:#fca5a5}
+.out-box.correct-out{border-color:rgba(34,197,94,0.2);color:#86efac}
+.timing{font-size:0.7rem;color:var(--text3);text-align:right}
+.out-label{font-size:0.67rem;margin-bottom:4px;font-weight:600}
+.out-label.b{color:#fca5a5}.out-label.c{color:#86efac}
+
+/* ── PAIR DETAIL MODAL ── */
+.modal-overlay{position:fixed;inset:0;z-index:500;
+               background:rgba(4,6,12,0.85);backdrop-filter:blur(10px);
+               display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.hidden{display:none}
+.modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;
+           width:100%;max-width:1180px;max-height:92vh;display:flex;flex-direction:column;
+           overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6)}
+.modal-head{padding:18px 24px;border-bottom:1px solid var(--border);
+            display:flex;align-items:center;gap:12px;flex-shrink:0}
+.modal-title{flex:1;font-size:0.95rem;font-weight:700;letter-spacing:-0.2px;
+             display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.modal-close{background:var(--bg2);border:1px solid var(--border);color:var(--text2);
+             font-size:0.9rem;cursor:pointer;padding:5px 12px;border-radius:7px;
+             transition:all 0.18s;font-family:'Inter',sans-serif}
+.modal-close:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+.modal-body{flex:1;overflow:hidden;display:grid;grid-template-columns:420px 1fr}
+.modal-left{border-right:1px solid var(--border);padding:22px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.modal-right{padding:22px;overflow-y:auto}
+.m-label{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.9px;color:var(--text3);margin-bottom:6px}
+.m-bug-card{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
+            border-radius:9px;padding:12px 14px;font-size:0.82rem;line-height:1.6;color:var(--text2)}
+.m-bug-card strong{color:var(--amber)}
+.m-statement{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+             padding:14px 16px;font-size:0.84rem;color:var(--text2);line-height:1.75;
+             max-height:340px;overflow-y:auto;white-space:pre-wrap}
+.m-meta-row{display:flex;flex-direction:column;gap:4px}
+.m-meta-key{font-size:0.68rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.m-meta-val{font-size:0.82rem;color:var(--text2)}
+.m-code-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;height:100%}
+.m-code-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column}
+.m-code-head{padding:10px 14px;font-size:0.75rem;font-weight:600;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.m-code-head.buggy{background:rgba(239,68,68,0.1);color:#fca5a5}
+.m-code-head.correct{background:rgba(34,197,94,0.1);color:#86efac}
+.m-code-wrap pre{flex:1;overflow:auto;margin:0;border-radius:0;font-size:0.72rem;min-height:400px}
+.m-code-wrap pre code{font-size:0.72rem}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:36px;color:var(--text3);font-size:0.78rem;
+       border-top:1px solid var(--border);background:var(--bg)}
+footer strong{color:var(--text2)}
+
+/* ── UTILS ── */
+.hidden{display:none!important}
+@media(max-width:900px){
+  .demo-layout,.code-cols,.m-code-cols,.m-modal-body,.modal-body,.browser-layout{grid-template-columns:1fr}
+  .modal-left{border-right:none;border-bottom:1px solid var(--border);max-height:40vh}
+  .modal-box{max-height:98vh}
+  .finding-row{grid-template-columns:1fr}
+  .filter-panel{position:static}
+  .section-inner{padding:80px 24px 60px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">AlgoBugs</span>
+  <a href="#hero">Home</a>
+  <a href="#dashboard">Results</a>
+  <a href="#dataset">Dataset</a>
+  <a href="#demo">Demo</a>
+</nav>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section id="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><span class="hero-badge-dot"></span>BSc FYDP · DIU · May 2026</div>
+    <h1 class="hero-title">AlgoBugs</h1>
+    <p class="hero-sub">A diagnostic benchmark evaluating how well large language models can expose specific categories of algorithmic bugs in competitive programming submissions — across 1,000 real C++ pairs, 8 bug categories, and 5 frontier models.</p>
+    <div class="counters">
+      <div class="counter-card"><span class="counter-num" data-target="1000">0</span><div class="counter-lbl">Submission Pairs</div></div>
+      <div class="counter-card"><span class="counter-num" data-target="40">0</span><div class="counter-lbl">CF Problems</div></div>
+      <div class="counter-card"><span class="counter-num" data-target="5">0</span><div class="counter-lbl">LLMs Evaluated</div></div>
+      <div class="counter-card"><span class="counter-num" data-target="8">0</span><div class="counter-lbl">Bug Categories</div></div>
+    </div>
+    <div class="hero-cta">
+      <a href="#dashboard" class="btn-grad">View Results</a>
+      <a href="#dataset" class="btn-ghost">Browse Dataset</a>
+      <a href="#demo" class="btn-ghost">▶ Replay Demo</a>
+    </div>
+    <p class="hero-footer">Mohimenul Islam &nbsp;·&nbsp; Dept. of CSE, Daffodil International University</p>
+  </div>
+</section>
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<section id="dashboard">
+<div class="section-inner">
+  <div class="section-badge">Results</div>
+  <h2 class="section-title">Evaluation Results</h2>
+  <p class="section-sub">Fault Exposure Rate (FER) = bugs exposed ÷ (bugs exposed + not exposed) × 100%. Compile errors and no-test-generated verdicts are excluded from the denominator.</p>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showTab('overall',this)">Overall FER</button>
+    <button class="tab-btn" onclick="showTab('category',this)">Per Category</button>
+    <button class="tab-btn" onclick="showTab('strategy',this)">Prompting Strategies</button>
+  </div>
+
+  <div id="pane-overall" class="tab-pane active">
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Fault Exposure Rate (%) — All Models × Prompting Strategies</div>
+      <canvas id="chart-overall" height="85"></canvas>
+    </div>
+    <div class="finding-row" id="finding-row"></div>
+  </div>
+
+  <div id="pane-category" class="tab-pane">
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Zero-Shot FER (%) — Model × Bug Category</div>
+      <div style="overflow-x:auto"><table class="heatmap" id="heatmap-table"></table></div>
+      <div class="hm-legend"><span>0%</span><div class="hm-legend-bar"></div><span>~36%</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Average Per-Category FER (%) — Zero-Shot, All Models</div>
+      <canvas id="chart-cat-avg" height="80"></canvas>
+    </div>
+  </div>
+
+  <div id="pane-strategy" class="tab-pane">
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Change in FER (pp) from Zero-Shot Baseline</div>
+      <canvas id="chart-delta" height="90"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">Key Observations</div>
+      <div id="strategy-findings" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ DATASET ═══════════ -->
+<section id="dataset">
+<div class="section-inner">
+  <div class="section-badge">Dataset</div>
+  <h2 class="section-title">Dataset Browser</h2>
+  <p class="section-sub">1,000 C++ submission pairs from 40 Codeforces problems across 8 difficulty brackets. Click any problem to expand its pairs — click a pair to view the full code, problem statement, and bug details.</p>
+  <div class="browser-layout">
+    <aside class="filter-panel">
+      <div class="vis-count" id="visible-count">1000</div>
+      <div class="vis-sub">pairs visible</div>
+      <div class="filter-group">
+        <span class="filter-label">Difficulty</span>
+        <div class="toggle-row" id="rating-toggles"></div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Bug Category</span>
+        <div id="cat-toggles"></div>
+      </div>
+    </aside>
+    <div class="problem-grid" id="problem-grid"></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ DEMO ═══════════ -->
+<section id="demo">
+<div class="section-inner">
+  <div class="section-badge">Demo</div>
+  <h2 class="section-title">Evaluation Replay</h2>
+  <p class="section-sub">Replays of the actual benchmark run. Each test case, output, and verdict shown was produced during the real 1,000-pair evaluation — not generated live. Select a bug category and a model to see what happened.</p>
+  <div class="demo-tabs" id="demo-tabs"></div>
+  <div class="demo-layout">
+    <div class="demo-panel">
+      <div id="demo-prob-info"></div>
+      <div class="code-cols" id="demo-code-cols"></div>
+    </div>
+    <div class="demo-panel">
+      <div class="model-label">Select a model to evaluate:</div>
+      <div class="model-grid" id="model-btns"></div>
+      <button class="run-btn" id="run-btn" disabled onclick="runEval()">
+        <span>▶</span> Run Evaluation
+      </button>
+      <div class="eval-result" id="eval-result"></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════ PAIR DETAIL MODAL ═══════════ -->
+<div class="modal-overlay hidden" id="pair-modal" onclick="handleModalClick(event)">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="modal-close" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-left" id="modal-left"></div>
+      <div class="modal-right" id="modal-right"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <strong>AlgoBugs</strong> — Diagnostic Benchmark for LLM Fault-Exposure on Competitive Programming Bugs<br>
+  <span style="opacity:0.5;margin-top:4px;display:block">BSc CSE Final Year Design Project · Daffodil International University · May 2026</span>
+</footer>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const CAT_COLORS={T1:'#ef4444',T2:'#f97316',T3:'#eab308',T4:'#22c55e',T5:'#14b8a6',T6:'#3b82f6',T7:'#a855f7',T8:'#ec4899'};
+const RATING_COLORS={1400:'#22c55e',1500:'#14b8a6',1600:'#3b82f6',1700:'#8b5cf6',1800:'#f97316',1900:'#ef4444',2000:'#dc2626',2100:'#991b1b'};
+const MODEL_ICONS={'Gemini Flash':'G','LLaMA 70B':'L','Qwen3 Coder':'Q','DeepSeek V3':'D','GPT-5.1':'⚡'};
+const MODEL_ORDER=['Gemini Flash','LLaMA 70B','Qwen3 Coder','DeepSeek V3','GPT-5.1'];
+const CAT_NAMES={T1:'Integer Overflow',T2:'Modular Arithmetic',T3:'Off-by-One',T4:'Wrong Conditional',T5:'Algorithmic Flaw',T6:'State / Init',T7:'Corner Case',T8:'I/O Format'};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let RESULTS=null,DATASET=null,DEMO=null;
+let activeRatings=new Set([1400,1500,1600,1700,1800,1900,2000,2100]);
+let activeCats=new Set(['T1','T2','T3','T4','T5','T6','T7','T8']);
+let currentDemoCat=0,selectedModel=null,charts={};
+const problemCache={};
+
+// ── Smooth nav scroll ──────────────────────────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const target=document.getElementById(a.getAttribute('href').slice(1));
+    if(target){e.preventDefault();target.scrollIntoView({behavior:'smooth',block:'start'})}
+  });
+});
+
+// ── Load ──────────────────────────────────────────────────────────────────
+async function loadData(){
+  const [r,d,demo]=await Promise.all([
+    fetch('data/results.json').then(x=>x.json()),
+    fetch('data/dataset.json').then(x=>x.json()),
+    fetch('data/demo_pairs.json').then(x=>x.json()),
+  ]);
+  RESULTS=r;DATASET=d;DEMO=demo;
+  animateCounters();initDashboard();initDatasetBrowser();initDemo();initNavHighlight();
+}
+
+// ── Counters ──────────────────────────────────────────────────────────────
+function animateCounters(){
+  document.querySelectorAll('.counter-num[data-target]').forEach(el=>{
+    const target=+el.dataset.target,steps=50,dur=1400;
+    let i=0;
+    const ease=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    const tick=()=>{i++;const v=Math.round(target*ease(i/steps));
+      el.textContent=v>=1000?v.toLocaleString():v;if(i<steps)requestAnimationFrame(tick)};
+    requestAnimationFrame(tick);
+  });
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function showTab(name,btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='category'&&!charts.catAvg)buildCategoryCharts();
+  if(name==='strategy'&&!charts.delta)buildStrategyChart();
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+function initDashboard(){buildOverallChart();buildFindingCards()}
+function getSummaryFor(model,strategy){return RESULTS.summary.find(r=>r.model===model&&r.strategy===strategy)}
+
+Chart.defaults.color='#64748b';
+Chart.defaults.borderColor='rgba(148,163,184,0.07)';
+Chart.defaults.font.family="'Inter', system-ui, sans-serif";
+
+function buildOverallChart(){
+  const strats=[{key:'zero_shot',label:'Zero-Shot',color:'#6366f1'},
+                {key:'cot',label:'Chain-of-Thought',color:'#f59e0b'},
+                {key:'few_shot',label:'Few-Shot',color:'#22c55e'}];
+  charts.overall=new Chart(document.getElementById('chart-overall'),{
+    type:'bar',
+    data:{labels:MODEL_ORDER,datasets:strats.map(s=>({
+      label:s.label,
+      data:MODEL_ORDER.map(m=>{const r=getSummaryFor(m,s.key);return r?r.overall:null}),
+      backgroundColor:s.color+'26',borderColor:s.color,borderWidth:2,borderRadius:5,borderSkipped:false,
+    }))},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:12},padding:20}}},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:12}},grid:{display:false}},
+        y:{min:0,max:30,ticks:{color:'#64748b',callback:v=>v+'%'},
+           title:{display:true,text:'FER (%)',color:'#475569',font:{size:11}}}
+      }}
+  });
+}
+
+function buildFindingCards(){
+  const row=document.getElementById('finding-row');
+  let bestModel='',bestFer=0;
+  MODEL_ORDER.forEach(m=>['few_shot','zero_shot','cot'].forEach(s=>{
+    const r=getSummaryFor(m,s);if(r&&r.overall>bestFer){bestFer=r.overall;bestModel=m}
+  }));
+  const catAvgs={};
+  ['T1','T2','T3','T4','T5','T6','T7','T8'].forEach(c=>{
+    const vals=MODEL_ORDER.map(m=>{const r=getSummaryFor(m,'zero_shot');return r&&r[c]!=null?r[c]:null}).filter(v=>v!=null);
+    catAvgs[c]=vals.reduce((a,b)=>a+b,0)/vals.length;
+  });
+  const best=Object.entries(catAvgs).sort((a,b)=>b[1]-a[1])[0];
+  const worst=Object.entries(catAvgs).sort((a,b)=>a[1]-b[1])[0];
+  row.innerHTML=[
+    {num:bestFer.toFixed(1)+'%',lbl:`Best overall FER — <strong style="color:var(--text)">${bestModel}</strong>`},
+    {num:best[1].toFixed(1)+'%',lbl:`Most exposed: <strong style="color:${CAT_COLORS[best[0]]}">${best[0]}: ${CAT_NAMES[best[0]]}</strong>`},
+    {num:worst[1].toFixed(1)+'%',lbl:`Hardest: <strong style="color:${CAT_COLORS[worst[0]]}">${worst[0]}: ${CAT_NAMES[worst[0]]}</strong>`},
+  ].map(f=>`<div class="finding-card"><div class="fc-num">${f.num}</div><div class="fc-lbl">${f.lbl}</div></div>`).join('');
+}
+
+function hmColor(val,max=36){
+  const t=Math.min(Math.max(val,0)/max,1);
+  const r=Math.round(248*(1-t)+49*t*0.6),g=Math.round(250*(1-t)+46*t*0.4),b=Math.round(252*(1-t)+129*t);
+  return{bg:`rgb(${r},${g},${b})`,text:t>0.42?'#fff':'#0f172a'};
+}
+
+function buildCategoryCharts(){
+  const cats=['T1','T2','T3','T4','T5','T6','T7','T8'];
+  let html='<thead><tr><th class="row-h">Model</th>';
+  cats.forEach(c=>{html+=`<th title="${CAT_NAMES[c]}">${c}<br><small style="opacity:0.6;font-weight:400">${CAT_NAMES[c].split('/')[0].substring(0,7)}</small></th>`});
+  html+='</tr></thead><tbody>';
+  MODEL_ORDER.forEach(m=>{
+    const row=getSummaryFor(m,'zero_shot');
+    html+=`<tr><td class="row-h">${m}</td>`;
+    cats.forEach(c=>{
+      const v=row&&row[c]!=null?row[c]:0;
+      const{bg,text}=hmColor(v);
+      html+=`<td style="background:${bg};color:${text}" title="${m} / ${c}: ${v}%">${v.toFixed(1)}</td>`;
+    });
+    html+='</tr>';
+  });
+  document.getElementById('heatmap-table').innerHTML=html+'</tbody>';
+
+  const catAvg=cats.map(c=>{
+    const vals=MODEL_ORDER.map(m=>{const r=getSummaryFor(m,'zero_shot');return r&&r[c]!=null?r[c]:null}).filter(v=>v!=null);
+    return vals.reduce((a,b)=>a+b,0)/vals.length;
+  });
+  charts.catAvg=new Chart(document.getElementById('chart-cat-avg'),{
+    type:'bar',
+    data:{labels:cats.map(c=>`${c}: ${CAT_NAMES[c]}`),
+      datasets:[{label:'Avg ZS FER (%)',data:catAvg,
+        backgroundColor:cats.map(c=>CAT_COLORS[c]+'28'),
+        borderColor:cats.map(c=>CAT_COLORS[c]),borderWidth:2,borderRadius:5}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{min:0,max:35,ticks:{callback:v=>v+'%'}},y:{grid:{display:false}}}}
+  });
+}
+
+function buildStrategyChart(){
+  const deltas=MODEL_ORDER.map(m=>{
+    const zs=getSummaryFor(m,'zero_shot'),cot=getSummaryFor(m,'cot'),fs=getSummaryFor(m,'few_shot');
+    return{cot:cot&&zs?+(cot.overall-zs.overall).toFixed(1):null,fs:fs&&zs?+(fs.overall-zs.overall).toFixed(1):null};
+  });
+  charts.delta=new Chart(document.getElementById('chart-delta'),{
+    type:'bar',
+    data:{labels:MODEL_ORDER,datasets:[
+      {label:'CoT Δ (pp)',data:deltas.map(d=>d.cot),borderRadius:5,
+       backgroundColor:deltas.map(d=>d.cot==null?'transparent':d.cot>=0?'#6366f126':'#ef444426'),
+       borderColor:deltas.map(d=>d.cot==null?'transparent':d.cot>=0?'#6366f1':'#ef4444'),borderWidth:2},
+      {label:'Few-Shot Δ (pp)',data:deltas.map(d=>d.fs),borderRadius:5,
+       backgroundColor:deltas.map(d=>d.fs==null?'rgba(255,255,255,0.04)':d.fs>=0?'#22c55e26':'#f9731626'),
+       borderColor:deltas.map(d=>d.fs==null?'rgba(255,255,255,0.08)':d.fs>=0?'#22c55e':'#f97316'),borderWidth:2},
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#94a3b8'}}},
+      scales:{x:{grid:{display:false}},
+        y:{ticks:{callback:v=>(v>=0?'+':'')+v+'pp'},title:{display:true,text:'Δ from ZS baseline (pp)',color:'#475569',font:{size:11}}}}}
+  });
+  document.getElementById('strategy-findings').innerHTML=[
+    {icon:'📊',title:'CoT provides no consistent benefit.',text:'3 of 5 models show negative deltas under chain-of-thought (DeepSeek −3.4pp, Qwen −2.8pp, Gemini −0.2pp). Instructing the model to reason step-by-step does not reliably improve fault-targeted test generation.'},
+    {icon:'🎯',title:'Few-shot is model-specific, not universal.',text:'GPT-5.1 gains +5.6pp and LLaMA gains +3.4pp from demonstrations. Three other models show no benefit — suggesting the effect depends on pre-training, not the prompting technique itself.'},
+    {icon:'💡',title:'Models generate specification-valid tests, not fault-targeted ones.',text:'The wide per-category variance (T1 ≈4%, T3 ≈26%) indicates models verify expected behaviour rather than targeting specific failure modes. The ceiling is a reasoning gap, not a generation gap.'},
+  ].map(f=>`<div style="display:flex;gap:12px;padding:14px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+    <span style="font-size:1.2rem;flex-shrink:0">${f.icon}</span>
+    <div><strong style="color:var(--text);font-size:0.85rem">${f.title}</strong>
+    <p style="color:var(--text2);font-size:0.8rem;line-height:1.6;margin-top:3px">${f.text}</p></div></div>`).join('');
+}
+
+// ── Dataset Browser ────────────────────────────────────────────────────────
+function initDatasetBrowser(){
+  const ratings=[1400,1500,1600,1700,1800,1900,2000,2100];
+  const rrow=document.getElementById('rating-toggles');
+  ratings.forEach(r=>{
+    const btn=document.createElement('button');
+    btn.className='rtoggle on';btn.textContent=r;
+    btn.style.setProperty('--rc',RATING_COLORS[r]);
+    btn.onclick=()=>{btn.classList.toggle('on');activeRatings[btn.classList.contains('on')?'add':'delete'](r);renderProblems()};
+    rrow.appendChild(btn);
+  });
+  const crow=document.getElementById('cat-toggles');
+  Object.entries(CAT_COLORS).forEach(([cat,color])=>{
+    const lbl=document.createElement('label');lbl.className='cat-row';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;
+    cb.onchange=()=>{activeCats[cb.checked?'add':'delete'](cat);renderProblems()};
+    const dot=document.createElement('div');dot.className='cat-dot';dot.style.background=color;
+    lbl.appendChild(cb);lbl.appendChild(dot);
+    lbl.appendChild(document.createTextNode(`${cat}: ${CAT_NAMES[cat]}`));
+    crow.appendChild(lbl);
+  });
+  renderProblems();
+}
+
+function renderProblems(){
+  const grid=document.getElementById('problem-grid');grid.innerHTML='';
+  let totalVisible=0;
+  DATASET.problems.forEach(p=>{
+    if(!activeRatings.has(p.rating))return;
+    const vis=p.pairs.filter(pr=>activeCats.has(pr.bug_category));
+    if(!vis.length)return;
+    totalVisible+=vis.length;
+    const catCounts={};p.pairs.forEach(pr=>{catCounts[pr.bug_category]=(catCounts[pr.bug_category]||0)+1});
+    const card=document.createElement('div');card.className='problem-card';
+    const catBar=Object.entries(CAT_COLORS).map(([c,col])=>{
+      const n=catCounts[c]||0;
+      return`<div class="catbar-seg${n?' has-pairs':''}" style="background:${col}" title="${c}: ${n} pairs"></div>`;
+    }).join('');
+    const rc=RATING_COLORS[p.rating];
+    card.innerHTML=`
+      <div class="pc-header">
+        <div class="pc-name">${p.id.replace('CF_','')} &middot; ${escHtml(p.title)}</div>
+        <div class="pc-meta">
+          <span class="rating-pill" style="background:${rc}18;color:${rc};border:1px solid ${rc}30">${p.rating}</span>
+          <span class="pc-count">${vis.length} pairs</span>
+          ${p.url?`<a class="pc-cf-link" href="${p.url}" target="_blank" onclick="event.stopPropagation()">↗ Codeforces</a>`:''}
+        </div>
+        <div class="catbar">${catBar}</div>
+      </div>
+      <div class="pc-body" id="pb-${p.id}"><div class="loading-row">Click to load pairs…</div></div>`;
+    card.querySelector('.pc-header').onclick=()=>toggleProblem(p.id,card);
+    grid.appendChild(card);
+  });
+  document.getElementById('visible-count').textContent=totalVisible.toLocaleString();
+}
+
+async function toggleProblem(pid,card){
+  const body=card.querySelector('.pc-body');
+  const isOpen=body.classList.contains('open');
+  document.querySelectorAll('.pc-body.open').forEach(b=>b.classList.remove('open'));
+  document.querySelectorAll('.problem-card.open').forEach(c=>c.classList.remove('open'));
+  if(isOpen)return;
+  body.classList.add('open');card.classList.add('open');
+  if(problemCache[pid]){renderPairRows(pid,body);return}
+  body.innerHTML='<div class="loading-row">Loading pairs…</div>';
+  try{
+    const data=await fetch(`data/problems/${pid}.json`).then(r=>r.json());
+    problemCache[pid]=data;
+    renderPairRows(pid,body);
+  }catch(e){body.innerHTML='<div class="loading-row" style="color:var(--red)">Failed to load pair data.</div>'}
+}
+
+function renderPairRows(pid,body){
+  const pdata=problemCache[pid];
+  const vis=pdata.pairs.filter(pr=>activeCats.has(pr.bug_category));
+  if(!vis.length){body.innerHTML='<div class="loading-row">No pairs match current filters.</div>';return}
+  body.innerHTML=vis.map(pr=>`
+    <div class="pair-row" onclick="openPairModal('${pid}',${pr.pair_id})">
+      <span class="t-pill" style="background:${CAT_COLORS[pr.bug_category]}20;color:${CAT_COLORS[pr.bug_category]};border:1px solid ${CAT_COLORS[pr.bug_category]}40">${pr.bug_category}</span>
+      <span class="pair-desc">Pair ${pr.pair_id} — ${escHtml(pr.bug_description.substring(0,85))}${pr.bug_description.length>85?'…':''}</span>
+      <span class="view-link">View →</span>
+    </div>`).join('');
+}
+
+// ── Pair Detail Modal ──────────────────────────────────────────────────────
+function openPairModal(pid,pairId){
+  const pdata=problemCache[pid];if(!pdata)return;
+  const pair=pdata.pairs.find(p=>p.pair_id===pairId);if(!pair)return;
+  const rc=RATING_COLORS[pdata.rating];
+  document.getElementById('modal-title').innerHTML=`
+    <span>${pdata.id.replace('CF_','')} &middot; ${escHtml(pdata.title)}</span>
+    <span class="rating-pill" style="background:${rc}18;color:${rc};border:1px solid ${rc}30;font-size:0.75rem;padding:3px 9px;border-radius:20px">${pdata.rating}</span>
+    <span class="t-pill" style="background:${CAT_COLORS[pair.bug_category]}20;color:${CAT_COLORS[pair.bug_category]};border:1px solid ${CAT_COLORS[pair.bug_category]}40;font-size:0.73rem;padding:3px 9px;border-radius:5px">Pair ${pairId} · ${pair.bug_category}</span>`;
+
+  document.getElementById('modal-left').innerHTML=`
+    <div class="m-meta-row">
+      <div class="m-label">Bug Category</div>
+      <div class="m-meta-val" style="color:${CAT_COLORS[pair.bug_category]};font-weight:600">${pair.bug_category}: ${CAT_NAMES[pair.bug_category]}</div>
+    </div>
+    <div>
+      <div class="m-label">Bug Description</div>
+      <div class="m-bug-card"><strong>${pair.bug_category}</strong> — ${escHtml(pair.bug_description)}</div>
+    </div>
+    ${pair.problem_statement?`
+    <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="m-label">Problem Statement</div>
+      <div class="m-statement">${escHtml(pair.problem_statement)}</div>
+    </div>`:''}`;
+
+  document.getElementById('modal-right').innerHTML=`
+    <div class="m-code-cols">
+      <div class="m-code-wrap">
+        <div class="m-code-head buggy">⚠ Buggy Solution (Wrong Answer)</div>
+        <pre><code class="language-cpp">${escHtml(pair.buggy_code)}</code></pre>
+      </div>
+      <div class="m-code-wrap">
+        <div class="m-code-head correct">✓ Correct Solution (Accepted)</div>
+        <pre><code class="language-cpp">${escHtml(pair.correct_code)}</code></pre>
+      </div>
+    </div>`;
+
+  document.getElementById('pair-modal').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+  Prism.highlightAll();
+}
+
+function closeModal(){
+  document.getElementById('pair-modal').classList.add('hidden');
+  document.body.style.overflow='';
+}
+function handleModalClick(e){if(e.target===document.getElementById('pair-modal'))closeModal()}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+// ── Demo ──────────────────────────────────────────────────────────────────
+function initDemo(){
+  const tabsEl=document.getElementById('demo-tabs');
+  DEMO.forEach((pair,i)=>{
+    const btn=document.createElement('button');btn.className='demo-tab'+(i===0?' active':'');
+    btn.innerHTML=`<span class="cat-dot-sm" style="background:${CAT_COLORS[pair.category]}"></span>${pair.category}: ${pair.category_name}`;
+    btn.onclick=()=>selectDemoPair(i,btn);tabsEl.appendChild(btn);
+  });
+  const mbEl=document.getElementById('model-btns');
+  MODEL_ORDER.forEach(model=>{
+    if(!DEMO[0].results[model])return;
+    const btn=document.createElement('button');btn.className='model-btn';btn.dataset.model=model;
+    btn.innerHTML=`<span class="model-icon">${MODEL_ICONS[model]||'·'}</span><span>${model}</span>`;
+    btn.onclick=()=>selectModel(model,btn);mbEl.appendChild(btn);
+  });
+  selectDemoPair(0,tabsEl.querySelector('.demo-tab'));
+}
+
+function selectDemoPair(idx,btn){
+  currentDemoCat=idx;selectedModel=null;
+  document.querySelectorAll('.demo-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.getElementById('run-btn').disabled=true;
+  document.getElementById('eval-result').style.display='none';
+  document.querySelectorAll('.model-btn').forEach(b=>b.classList.remove('selected'));
+  renderDemoPair(DEMO[idx]);
+}
+
+function renderDemoPair(pair){
+  const rc=RATING_COLORS[pair.rating];
+  const intro=pair.problem_intro||'';
+  document.getElementById('demo-prob-info').innerHTML=`
+    <div class="demo-prob-title">
+      <span>${pair.problem_id.replace('CF_','')} · ${escHtml(pair.problem_title)}</span>
+      <span class="rating-pill" style="background:${rc}18;color:${rc};border:1px solid ${rc}30">${pair.rating}</span>
+    </div>
+    <div class="bug-card"><strong>Bug (${pair.category} — ${pair.category_name}):</strong> ${escHtml(pair.bug_description)}</div>
+    ${intro?`<div class="prob-statement" id="demo-stmt">${escHtml(intro.substring(0,350))}${intro.length>350?'…':''}</div>
+    ${intro.length>350?`<button class="read-more-btn" onclick="toggleDemoIntro(this)">Read more ▾</button>`:''}`:''}`;
+  document.getElementById('demo-code-cols').innerHTML=`
+    <div class="code-wrap">
+      <div class="code-head buggy">⚠ Buggy (WA)</div>
+      <pre><code class="language-cpp">${escHtml(pair.buggy_code)}</code></pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-head correct">✓ Correct (AC)</div>
+      <pre><code class="language-cpp">${escHtml(pair.correct_code)}</code></pre>
+    </div>`;
+  Prism.highlightAll();
+}
+
+function toggleDemoIntro(btn){
+  const el=document.getElementById('demo-stmt');
+  const intro=DEMO[currentDemoCat].problem_intro||'';
+  if(btn.textContent.includes('▾')){el.textContent=intro;btn.textContent='Show less ▴'}
+  else{el.textContent=intro.substring(0,350)+'…';btn.textContent='Read more ▾'}
+}
+
+function selectModel(model,btn){
+  selectedModel=model;
+  document.querySelectorAll('.model-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');
+  document.getElementById('run-btn').disabled=false;
+  document.getElementById('eval-result').style.display='none';
+}
+
+function runEval(){
+  if(!selectedModel)return;
+  const pair=DEMO[currentDemoCat],result=pair.results[selectedModel];
+  const evalEl=document.getElementById('eval-result'),runBtn=document.getElementById('run-btn');
+  runBtn.disabled=true;evalEl.style.display='block';
+  const steps=[
+    {text:`Sending prompt to ${selectedModel}…`,dur:1500},
+    {text:'Compiling with g++ -std=c++20 -O2…',dur:600},
+    {text:'Running differential test…',dur:500},
+  ];
+  evalEl.innerHTML=`<div class="loading-steps">${steps.map((_,i)=>`<div class="lstep" id="ls${i}"><div class="lstep-dot"></div><span>${steps[i].text}</span></div>`).join('')}</div>`;
+  let elapsed=0;
+  steps.forEach((s,i)=>{
+    setTimeout(()=>{
+      document.querySelectorAll('.lstep').forEach((el,j)=>{
+        if(j<i){el.className='lstep done';el.innerHTML=`<div class="lstep-dot"></div><span>${steps[j].text}</span>`}
+        else if(j===i){el.className='lstep active';el.innerHTML=`<div class="lstep-spin"></div><span>${steps[j].text}</span>`}
+      });
+    },elapsed);elapsed+=s.dur;
+  });
+  setTimeout(()=>showResult(evalEl,result,pair,runBtn),elapsed+200);
+}
+
+function showResult(el,result,pair,runBtn){
+  if(!result){el.innerHTML=`<div class="result-card"><div class="verdict-bar error"><span class="verdict-icon">⚠</span><div>No data</div></div></div>`;runBtn.disabled=false;return}
+  const exposed=result.verdict==='BUG_EXPOSED';
+  const isErr=result.verdict&&result.verdict.includes('ERROR');
+  const vc=exposed?'exposed':isErr?'error':'not-exposed';
+  const vi=exposed?'✓':isErr?'⚠':'✗';
+  const vt=exposed?'BUG EXPOSED':isErr?'ERROR':'NOT EXPOSED';
+  const vs=exposed?`${selectedModel} generated a test that triggers the ${pair.category} bug`:`${selectedModel} failed to expose this ${pair.category} bug`;
+  el.innerHTML=`
+    <div class="result-card">
+      <div class="verdict-bar ${vc}">
+        <span class="verdict-icon">${vi}</span>
+        <div><div>${vt}</div><div class="verdict-sub">${vs}</div></div>
+      </div>
+      <div class="result-body">
+        <div><div class="r-label">Generated Test Input</div>
+          <div class="r-code">${escHtml((result.test||'(none)').substring(0,300))}</div></div>
+        <div><div class="r-label">Program Outputs</div>
+          <div class="out-cols">
+            <div><div class="out-label b">⚠ Buggy Output</div><div class="out-box buggy-out">${escHtml((result.buggy_out||'—').substring(0,150))}</div></div>
+            <div><div class="out-label c">✓ Correct Output</div><div class="out-box correct-out">${escHtml((result.correct_out||'—').substring(0,150))}</div></div>
+          </div></div>
+        ${result.exec_ms?`<div class="timing">Execution: ${result.exec_ms}ms${result.api_ms?' · API: '+result.api_ms+'ms':''}</div>`:''}
+      </div>
+    </div>`;
+  runBtn.disabled=false;runBtn.innerHTML='<span>↺</span> Try Another Model';
+}
+
+// ── Nav highlight ──────────────────────────────────────────────────────────
+function initNavHighlight(){
+  const ids=['hero','dashboard','dataset','demo'];
+  const links={};ids.forEach(id=>{links[id]=document.querySelector(`nav a[href="#${id}"]`)});
+  new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting&&links[e.target.id]){
+      Object.values(links).forEach(l=>l&&l.classList.remove('active'));
+      links[e.target.id].classList.add('active');
+    }});
+  },{threshold:0.25}).observe&&ids.forEach(id=>{const el=document.getElementById(id);if(el)new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting&&links[e.target.id]){
+      Object.values(links).forEach(l=>l&&l.classList.remove('active'));
+      links[e.target.id]&&links[e.target.id].classList.add('active');
+    }});
+  },{threshold:0.25}).observe(el)});
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+loadData().catch(()=>{
+  document.body.innerHTML=`<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px;font-family:Inter,sans-serif;background:#06090f;color:#f1f5f9">
+    <div>
+      <div style="font-size:2.5rem;font-weight:900;margin-bottom:12px;background:linear-gradient(135deg,#f1f5f9,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">AlgoBugs</div>
+      <p style="color:#94a3b8;margin-bottom:24px">Serve this directory over HTTP to load the data files:</p>
+      <code style="background:#0c1220;border:1px solid rgba(148,163,184,0.1);padding:12px 24px;border-radius:10px;display:inline-block;color:#818cf8;font-size:0.9rem">python3 -m http.server 8080</code>
+      <p style="color:#475569;margin-top:16px;font-size:0.85rem">Then open http://localhost:8080</p>
+    </div>
+  </div>`;
+});
+</script>
+</body>
+</html>

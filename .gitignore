@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.log
+# results/ is tracked — contains evaluation JSON files and summary CSV
+*.aux
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.out
+*.fls
+*.fdb_latexmk

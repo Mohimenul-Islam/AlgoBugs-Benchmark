@@ -1,0 +1,15 @@
+model,prompt_type,total_pairs,bugs_exposed,overall_fer,T1_fer,T2_fer,T3_fer,T4_fer,T5_fer,T6_fer,T7_fer,T8_fer
+deepseek/deepseek-chat,cot,968,105,10.8,3.3,2.7,19.1,11.5,10.2,5.3,9.1,12.8
+deepseek/deepseek-chat,few_shot,970,141,14.5,6.6,5.4,25.7,13.1,11.3,12.0,23.3,22.9
+deepseek/deepseek-chat,zero_shot,967,137,14.2,1.6,5.4,26.3,14.6,14.0,11.0,15.2,4.3
+google/gemini-2.0-flash-001,cot,868,134,15.4,6.0,14.7,22.6,16.0,15.2,8.3,14.3,15.0
+google/gemini-2.0-flash-001,few_shot,939,140,14.9,6.9,2.9,21.5,15.6,16.6,9.7,13.3,10.6
+google/gemini-2.0-flash-001,zero_shot,935,146,15.6,1.7,2.9,29.5,16.7,13.7,10.7,14.6,15.2
+meta-llama/llama-3.3-70b-instruct,cot,913,183,20.0,6.8,11.4,24.8,17.5,23.8,20.0,20.6,24.4
+meta-llama/llama-3.3-70b-instruct,few_shot,899,191,21.2,3.6,9.7,28.0,17.3,25.2,26.0,20.0,27.9
+meta-llama/llama-3.3-70b-instruct,zero_shot,945,168,17.8,6.6,11.8,22.8,17.5,19.5,10.8,24.4,19.6
+openai/gpt-5.1,cot,972,147,15.1,3.3,5.4,29.2,16.4,11.3,6.7,13.6,25.0
+openai/gpt-5.1,zero_shot,973,142,14.6,3.3,8.1,27.7,16.8,11.7,8.0,2.2,20.8
+qwen/qwen3-coder-30b-a3b-instruct,cot,705,123,17.4,8.7,17.2,22.1,15.0,19.7,15.8,19.0,21.4
+qwen/qwen3-coder-30b-a3b-instruct,few_shot,920,178,19.3,6.7,5.9,23.8,18.2,21.7,18.1,22.0,27.3
+qwen/qwen3-coder-30b-a3b-instruct,zero_shot,949,192,20.2,8.2,13.9,21.8,18.8,21.7,21.6,20.5,35.6

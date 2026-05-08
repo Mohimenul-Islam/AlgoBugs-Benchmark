@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Codeforces Submission Extractor</title>
+  <link rel="stylesheet" href="../styles/common.css" />
+  <link rel="stylesheet" href="../styles/codeforces.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Codeforces Submission Extractor</h1>
+
+    </header>
+    <main>
+      <div class="cf-config">
+        <h2>Codeforces Problem Pair & Source Fetcher</h2>
+        <form id="config-form" class="config-form">
+          <div class="form-row">
+            <label>Problem ID or URL
+              <input type="text" id="problem-input" placeholder="e.g. 1705A or https://codeforces.com/contest/1705/problem/A" />
+            </label>
+            <label>Pairs Count
+              <input type="number" id="pair-count" value="3" min="1" />
+            </label>
+            <label>API Delay (s)
+              <input type="number" id="api-delay" value="3" step="0.1" min="0" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label>Min Test Cases Passed
+              <input type="number" id="min-test-cases" value="2" min="0" max="100" title="Buggy solutions must pass at least this many test cases (to ensure they pass sample cases)" />
+            </label>
+            <label>Target Language
+              <select id="target-language">
+                <option value="cpp">C++ Only</option>
+                <option value="python">Python Only</option>
+                <option value="java">Java Only</option>
+                <option value="all">All Languages</option>
+              </select>
+            </label>
+            <label>Export Format
+              <select id="export-format">
+                <option value="pair_zips">Individual ZIP per pair</option>
+                <option value="single_zip">Single ZIP (All pairs)</option>
+              </select>
+            </label>
+          </div>
+          <div class="advanced-settings-toggle" id="advanced-toggle">
+            <span>⚙️ Advanced Settings</span>
+            <span class="icon">▼</span>
+          </div>
+          <div class="advanced-settings hidden" id="advanced-settings">
+            <div class="form-row">
+              <label>Burst Limit
+                <input type="number" id="burst-limit" value="8" min="1" max="20" title="Number of requests before mandatory cooldown" />
+              </label>
+              <label>Cooldown (s)
+                <input type="number" id="cooldown-duration" value="15" min="5" max="60" title="Mandatory cooldown duration after burst" />
+              </label>
+              <label>Max Retries
+                <input type="number" id="max-retries" value="3" min="0" max="10" title="Maximum retries for failed sources" />
+              </label>
+            </div>
+          </div>
+          <div class="form-row">
+            <button type="submit" class="action-btn">Fetch</button>
+            <button id="cancel-btn" type="button" class="action-btn danger" disabled>Stop</button>
+          </div>
+        </form>
+        <div id="progress" class="progress hidden"></div>
+        <div id="status-dashboard" class="status-dashboard hidden">
+          <div class="status-item">
+            <span class="label">Status:</span>
+            <span id="status-state" class="value state-running">Running</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Delay:</span>
+            <span id="status-delay" class="value">3.0s</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Requests:</span>
+            <span id="status-requests" class="value">0</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Cooldown:</span>
+            <span id="status-cooldown" class="value">-</span>
+          </div>
+        </div>
+      </div>
+      <div class="results-section">
+        <h2>Results</h2>
+        <div class="results-header">
+          <div id="results-count" class="results-count">0 pairs found</div>
+          <div class="results-actions">
+            <button id="retry-all-btn" class="action-btn warning hidden">Retry All Failed</button>
+            <button id="download-all-btn" class="action-btn" disabled>Download All</button>
+          </div>
+        </div>
+        <div id="results" class="results-list">
+          <div class="placeholder">Enter a problem and click Fetch.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../scripts/turndown.js"></script>
+  <script src="../scripts/jszip.min.js"></script>
+  <script src="../scripts/codeforces_utils.js"></script>
+  <script src="../scripts/codeforces_engine.js"></script>
+  <script src="../scripts/codeforces_ui.js"></script>
+</body>
+</html>

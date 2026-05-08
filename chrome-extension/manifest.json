@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Codeforces Submission Extractor",
+  "version": "1.0",
+  "description": "A Chrome extension to download datasets from Codeforces",
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://codeforces.com/*"
+  ],
+  "action": {
+    "default_popup": "",
+    "default_title": "Codeforces Submission Extractor"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "icons": {}
+}

@@ -1,0 +1,360 @@
+/* Common styles for all pages */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    min-height: 100vh;
+}
+
+/* Header styles */
+header {
+    margin-bottom: 30px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 20px;
+}
+
+header h1 {
+    color: #2196F3;
+    margin-bottom: 15px;
+    font-size: 2rem;
+}
+
+nav {
+    display: flex;
+    gap: 20px;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #666;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.nav-link.active {
+    background-color: #2196F3;
+    color: white;
+}
+
+.nav-link.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Section styles */
+main > div {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #fafafa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+main > div h2 {
+    margin-bottom: 15px;
+    color: #444;
+    font-size: 1.4rem;
+}
+
+/* Loading styles */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.loading::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e0e0e0;
+    border-top: 2px solid #2196F3;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Button styles */
+.action-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.action-btn:hover {
+    background-color: #1976D2;
+    transform: translateY(-2px);
+}
+
+.action-btn.disabled,
+.action-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.action-btn.update-btn {
+    background-color: #4CAF50;
+}
+
+.action-btn.update-btn:hover {
+    background-color: #45a049;
+}
+
+.action-btn.danger {
+    background-color: #f44336;
+}
+
+.action-btn.danger:hover {
+    background-color: #da190b;
+}
+
+/* User info styles */
+.user-info {
+    background-color: white;
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e0e0e0;
+}
+
+.user-details h3 {
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.user-details p {
+    color: #666;
+    margin-bottom: 3px;
+}
+
+.login-section {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.login-section h3 {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+.login-btn {
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    padding: 12px 30px;
+    border-radius: 6px;
+    display: inline-block;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.login-btn:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+/* Status styles */
+.status-info {
+    background-color: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    font-weight: 500;
+    color: #555;
+}
+
+.status-value {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-value.connected {
+    background-color: #e8f5e8;
+    color: #4CAF50;
+}
+
+.status-value.disconnected {
+    background-color: #ffebee;
+    color: #f44336;
+}
+
+.status-value.checking {
+    background-color: #fff3e0;
+    color: #ff9800;
+}
+
+/* Message styles */
+.message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-weight: 500;
+}
+
+.message.success {
+    background-color: #e8f5e8;
+    color: #4CAF50;
+    border: 1px solid #c8e6c9;
+}
+
+.message.error {
+    background-color: #ffebee;
+    color: #f44336;
+    border: 1px solid #ffcdd2;
+}
+
+.message.info {
+    background-color: #e3f2fd;
+    color: #2196F3;
+    border: 1px solid #bbdefb;
+}
+
+.message.warning {
+    background-color: #fff3e0;
+    color: #ff9800;
+    border: 1px solid #ffcc02;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+    
+    header h1 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+    
+    nav {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .nav-link {
+        padding: 12px 16px;
+        text-align: center;
+        font-size: 16px;
+        border: 1px solid #e0e0e0;
+        background-color: white;
+    }
+    
+    .nav-link:hover {
+        background-color: #f8f8f8;
+    }
+    
+    .nav-link.active {
+        background-color: #2196F3;
+        color: white;
+        border-color: #2196F3;
+    }
+    
+    main > div {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    main > div h2 {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+    
+    header {
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    
+    header h1 {
+        font-size: 1.3rem;
+        text-align: center;
+    }
+    
+    .nav-link {
+        padding: 14px 16px;
+        font-size: 16px;
+        border-radius: 6px;
+    }
+    
+    main > div {
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+    
+    main > div h2 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+    }
+}
