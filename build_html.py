@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+import os
+
+html_head = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -747,7 +749,9 @@ Constraints:
     <a href="report.pdf" target="_blank">Thesis Report PDF</a>
   </div>
 </footer>
-<script>
+"""
+
+html_script = """<script>
 // ── Constants ──────────────────────────────────────────────────────────────
 const CAT_COLORS={T1:'#ef4444',T2:'#f97316',T3:'#eab308',T4:'#22c55e',T5:'#14b8a6',T6:'#3b82f6',T7:'#a855f7',T8:'#ec4899'};
 const RATING_COLORS={1400:'#22c55e',1500:'#14b8a6',1600:'#3b82f6',1700:'#8b5cf6',1800:'#f97316',1900:'#ef4444',2000:'#dc2626',2100:'#991b1b'};
@@ -1356,3 +1360,8 @@ window.onload=loadData;
 </script>
 </body>
 </html>
+"""
+
+with open('/home/mohimenul/report-finalise/Algobugs-Benchmark/web-showcase/index.html', 'w') as f:
+    f.write(html_head)
+    f.write(html_script)
