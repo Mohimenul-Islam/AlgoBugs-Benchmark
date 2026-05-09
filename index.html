@@ -759,7 +759,7 @@ const CAT_NAMES={T1:'Integer Overflow',T2:'Modular Arithmetic',T3:'Off-by-One',T
 let RESULTS=null,DATASET=null,DEMO=null;
 let activeRatings=new Set([1400,1500,1600,1700,1800,1900,2000,2100]);
 let activeCats=new Set(['T1','T2','T3','T4','T5','T6','T7','T8']);
-let currentDemoCat=0,selectedModel=null,charts={};
+let currentDemoCat=0,selectedModel=null,currentPromptType='zero_shot',charts={};
 const problemCache={};
 
 // ── Smooth nav scroll ──────────────────────────────────────────────────────
@@ -1222,14 +1222,43 @@ function initDemo(){
     btn.innerHTML=`<span class="cat-dot-sm" style="background:${CAT_COLORS[pair.category]}"></span>${pair.category}: ${pair.category_name}`;
     btn.onclick=()=>selectDemoPair(i,btn);tabsEl.appendChild(btn);
   });
+  
   const mbEl=document.getElementById('model-btns');
+  const demoPanel = mbEl.parentElement;
+  
+  // Add Prompt Technique Selection UI
+  const promptLabel = document.createElement('div');
+  promptLabel.className = 'model-label';
+  promptLabel.textContent = 'Select Prompt Technique:';
+  demoPanel.insertBefore(promptLabel, mbEl);
+
+  const promptTabs = document.createElement('div');
+  promptTabs.className = 'tab-bar';
+  promptTabs.style.marginBottom = '20px';
+  promptTabs.innerHTML = `
+    <button class="tab-btn active" onclick="selectPromptType('zero_shot', this)">Zero-Shot</button>
+    <button class="tab-btn" onclick="selectPromptType('cot', this)">CoT</button>
+    <button class="tab-btn" onclick="selectPromptType('few_shot', this)">Few-Shot</button>
+  `;
+  demoPanel.insertBefore(promptTabs, mbEl);
+
   MODEL_ORDER.forEach(model=>{
-    if(!DEMO[0].results[model])return;
+    // We know zero_shot exists for all 5 models from build_data.py
     const btn=document.createElement('button');btn.className='model-btn';btn.dataset.model=model;
     btn.innerHTML=`<span class="model-icon">${MODEL_ICONS[model]||'·'}</span><span>${model}</span>`;
     btn.onclick=()=>selectModel(model,btn);mbEl.appendChild(btn);
   });
   selectDemoPair(0,tabsEl.querySelector('.demo-tab'));
+}
+
+function selectPromptType(pt, btn) {
+  currentPromptType = pt;
+  btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedModel = null;
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('eval-result').style.display = 'none';
+  document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('selected'));
 }
 
 function selectDemoPair(idx,btn){
@@ -1244,15 +1273,16 @@ function selectDemoPair(idx,btn){
 function renderDemoPair(pair){
   const rc=RATING_COLORS[pair.rating];
   let parsedStatement = '';
-  if (pair.problem_statement) {
-    parsedStatement = marked.parse(pair.problem_statement);
+  // Fix: pair.problem_intro is the field name in demo_pairs.json
+  if (pair.problem_intro) {
+    parsedStatement = marked.parse(pair.problem_intro);
   }
   
   document.getElementById('demo-prob-info').innerHTML=`
-    <div class="demo-prob-title">${pair.problem_id.replace('CF_','')} &middot; ${escHtml(pair.problem_name)}
+    <div class="demo-prob-title">${pair.problem_id.replace('CF_','')} &middot; ${escHtml(pair.problem_title)}
       <span class="rating-pill" style="background:${rc}18;color:${rc};border:1px solid ${rc}30">${pair.rating}</span>
     </div>
-    <div class="bug-card"><strong>Bug (${pair.category} — ${pair.category_name}):</strong> ${escHtml(pair.bug_desc)}</div>
+    <div class="bug-card"><strong>Bug (${pair.category} — ${pair.category_name}):</strong> ${escHtml(pair.bug_description)}</div>
     <div class="prob-statement">${parsedStatement}</div>
     <button class="read-more-btn" onclick="this.previousElementSibling.style.maxHeight='none';this.style.display='none'">Read full statement ▼</button>
   `;
@@ -1305,20 +1335,29 @@ function runEval(){
 }
 
 function showEvalResult(pair,model){
-  const r=pair.results[model];
+  const pt = currentPromptType || 'zero_shot';
+  const r = pair.results[pt] ? pair.results[pt][model] : null;
   const resEl=document.getElementById('eval-result');
+  
+  if(!r){
+    resEl.innerHTML=`
+      <div class="result-card">
+        <div class="verdict-bar error"><span class="verdict-icon">!</span><div>NO DATA<div class="verdict-sub">No results available for ${model} with ${pt}</div></div></div>
+      </div>`;
+    return;
+  }
   
   if(r.verdict==='BUG_EXPOSED'){
     resEl.innerHTML=`
       <div class="result-card">
         <div class="verdict-bar exposed"><span class="verdict-icon">✓</span><div>BUG EXPOSED<div class="verdict-sub">${model} generated a test that triggers the ${pair.category} bug</div></div></div>
         <div class="result-body">
-          <div><div class="r-label">Generated Test Input</div><div class="r-code">${escHtml(r.test_input)}</div></div>
+          <div><div class="r-label">Generated Test Input</div><div class="r-code">${escHtml(r.test)}</div></div>
           <div>
             <div class="r-label">Program Outputs</div>
             <div class="out-cols">
-              <div><div class="out-label b">⚠ Buggy Output</div><div class="out-box buggy-out">${escHtml(r.buggy_output)}</div><div class="timing">${r.buggy_time.toFixed(3)}s</div></div>
-              <div><div class="out-label c">✓ Correct Output</div><div class="out-box correct-out">${escHtml(r.correct_output)}</div><div class="timing">${r.correct_time.toFixed(3)}s</div></div>
+              <div><div class="out-label b">⚠ Buggy Output</div><div class="out-box buggy-out">${escHtml(r.buggy_out)}</div><div class="timing">${r.exec_ms}ms</div></div>
+              <div><div class="out-label c">✓ Correct Output</div><div class="out-box correct-out">${escHtml(r.correct_out)}</div><div class="timing">${r.exec_ms}ms</div></div>
             </div>
           </div>
         </div>
@@ -1328,12 +1367,12 @@ function showEvalResult(pair,model){
       <div class="result-card">
         <div class="verdict-bar not-exposed"><span class="verdict-icon">✕</span><div>NOT EXPOSED<div class="verdict-sub">The generated test did not trigger the bug</div></div></div>
         <div class="result-body">
-          <div><div class="r-label">Generated Test Input</div><div class="r-code" style="color:#fca5a5">${escHtml(r.test_input)}</div></div>
+          <div><div class="r-label">Generated Test Input</div><div class="r-code" style="color:#fca5a5">${escHtml(r.test)}</div></div>
           <div>
             <div class="r-label">Program Outputs</div>
             <div class="out-cols">
-              <div><div class="out-label" style="color:var(--text3)">Buggy Output</div><div class="out-box">${escHtml(r.correct_output)}</div><div class="timing">${r.buggy_time.toFixed(3)}s</div></div>
-              <div><div class="out-label" style="color:var(--text3)">Correct Output</div><div class="out-box">${escHtml(r.correct_output)}</div><div class="timing">${r.correct_time.toFixed(3)}s</div></div>
+              <div><div class="out-label" style="color:var(--text3)">Buggy Output</div><div class="out-box">${escHtml(r.correct_out)}</div><div class="timing">${r.exec_ms}ms</div></div>
+              <div><div class="out-label" style="color:var(--text3)">Correct Output</div><div class="out-box">${escHtml(r.correct_out)}</div><div class="timing">${r.exec_ms}ms</div></div>
             </div>
             <div style="font-size:0.75rem;color:var(--text2);text-align:center;margin-top:10px">Both programs produced identical output. The fault was not exposed.</div>
           </div>
@@ -1344,7 +1383,7 @@ function showEvalResult(pair,model){
       <div class="result-card">
         <div class="verdict-bar error"><span class="verdict-icon">!</span><div>INVALID TEST<div class="verdict-sub">The generated input was rejected</div></div></div>
         <div class="result-body">
-          <div><div class="r-label">Generated Test Input</div><div class="r-code" style="color:#fcd34d">${escHtml(r.test_input)}</div></div>
+          <div><div class="r-label">Generated Test Input</div><div class="r-code" style="color:#fcd34d">${escHtml(r.test)}</div></div>
           <div style="font-size:0.8rem;color:var(--text2);padding:10px;background:rgba(255,255,255,0.03);border-radius:6px">The test case was either malformed, violated constraints, or caused a runtime error.</div>
         </div>
       </div>`;

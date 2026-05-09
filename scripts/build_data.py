@@ -47,12 +47,14 @@ CATEGORY_NAMES = {
     "T8": "I/O Format",
 }
 
-ZS_FILES = {
-    "DeepSeek V3":  RESULTS_DIR / "deepseek_v3_zero_shot.json",
-    "Gemini Flash": RESULTS_DIR / "gemini_flash_zero_shot.json",
-    "LLaMA 70B":    RESULTS_DIR / "llama70b_zero_shot.json",
-    "GPT-5.1":      RESULTS_DIR / "gpt51_zero_shot.json",
-    "Qwen3 Coder":  RESULTS_DIR / "qwen_coder_zero_shot.json",
+PROMPT_TYPES = ["zero_shot", "cot", "few_shot"]
+
+FILES = {
+    "DeepSeek V3":  {pt: RESULTS_DIR / f"deepseek_v3_{pt}.json" for pt in PROMPT_TYPES},
+    "Gemini Flash": {pt: RESULTS_DIR / f"gemini_flash_{pt}.json" for pt in PROMPT_TYPES},
+    "LLaMA 70B":    {pt: RESULTS_DIR / f"llama70b_{pt}.json" for pt in PROMPT_TYPES},
+    "GPT-5.1":      {pt: RESULTS_DIR / f"gpt51_{pt}.json" for pt in PROMPT_TYPES},
+    "Qwen3 Coder":  {pt: RESULTS_DIR / f"qwen_coder_{pt}.json" for pt in PROMPT_TYPES},
 }
 
 # ── Helper: iter all zips ─────────────────────────────────────────────────────
@@ -139,94 +141,73 @@ def build_dataset():
 
 # ── Output C: demo_pairs.json ─────────────────────────────────────────────────
 def build_demo_pairs():
-    # Load all 5 zero_shot result files into lookup
-    # lookup[(problem_id, pair_num)][model_name] = {verdict, test, correct_out, buggy_out}
-    lookup = defaultdict(dict)
-    for model_name, fpath in ZS_FILES.items():
-        if not fpath.exists():
-            print(f"  WARNING: missing {fpath}")
-            continue
-        with open(fpath) as f:
-            entries = json.load(f)
-        for e in entries:
-            key = (e["problem_id"], int(e["pair"]))
-            lookup[key][model_name] = {
-                "verdict":     e.get("verdict", "ERROR"),
-                "test":        e.get("generated_test_case") or "",
-                "correct_out": e.get("correct_output") or "",
-                "buggy_out":   e.get("buggy_output") or "",
-                "exec_ms":     e.get("execution_time_ms") or 0,
-                "api_ms":      e.get("api_response_time_ms") or 0,
-            }
-
-    # Build a zip lookup for fast code extraction
-    # zip_map[problem_id] = (rating, zpath)
-    zip_map = {}
-    for rating, zpath in iter_zips():
-        stem = zpath.stem.upper()
-        # try to match: zip filename like "2157c" → problem_id "CF_2157C"
-        pid_candidate = f"CF_{stem}"
-        zip_map[pid_candidate] = (rating, zpath)
-
-    all_model_names = list(ZS_FILES.keys())
-    demo_pairs = []
-
-    for cat in CATEGORIES:
-        # Collect all (problem_id, pair_num) for this category with all 5 models
-        candidates = []
-        for (pid, pair_num), model_results in lookup.items():
-            if len(model_results) < 5:
-                continue
-            # Check any pair in this category
-            # We need to know its category — read from dataset
-            # Use a shortcut: scan the results for bug_category
-            # Actually we need dataset info — let's re-read from the result entry
-            # The result files don't include bug_category in all entries equally.
-            # Instead build a category map from the zip metadata.
-            pass
-
-        candidates = []
-        for (pid, pair_num), model_results in lookup.items():
-            if len(model_results) < len(ZS_FILES):
-                continue  # need all 5 models
-            candidates.append((pid, pair_num, model_results))
-
-        # We need category info — build from result files (bug_category is in result entries)
-        # Re-scan to get category per (pid, pair)
-        cat_map = {}  # (pid, pair) → bug_category
-        for model_name, fpath in ZS_FILES.items():
+    # lookup[(problem_id, pair_num)][prompt_type][model_name] = {verdict, test, correct_out, buggy_out}
+    lookup = defaultdict(lambda: defaultdict(dict))
+    
+    for model_name, pt_map in FILES.items():
+        for pt, fpath in pt_map.items():
             if not fpath.exists():
+                print(f"  WARNING: missing {fpath}")
                 continue
             with open(fpath) as f:
                 entries = json.load(f)
             for e in entries:
                 key = (e["problem_id"], int(e["pair"]))
-                if key not in cat_map:
-                    cat_map[key] = e.get("bug_category", "")
+                lookup[key][pt][model_name] = {
+                    "verdict":     e.get("verdict", "ERROR"),
+                    "test":        e.get("generated_test_case") or "",
+                    "correct_out": e.get("correct_output") or "",
+                    "buggy_out":   e.get("buggy_output") or "",
+                    "exec_ms":     e.get("execution_time_ms") or 0,
+                    "api_ms":      e.get("api_response_time_ms") or 0,
+                }
 
-        # Filter candidates for this category
-        cat_candidates = [
-            (pid, pair_num, model_results)
-            for (pid, pair_num, model_results) in candidates
-            if cat_map.get((pid, pair_num)) == cat
-        ]
+    # Build a zip lookup for fast code extraction
+    zip_map = {}
+    for rating, zpath in iter_zips():
+        stem = zpath.stem.upper()
+        pid_candidate = f"CF_{stem}"
+        zip_map[pid_candidate] = (rating, zpath)
 
-        if not cat_candidates:
+    demo_pairs = []
+
+    # Build a category map from the zip metadata or result files
+    cat_map = {}  # (pid, pair) → bug_category
+    for model_name, pt_map in FILES.items():
+        fpath = pt_map["zero_shot"] # use zero_shot as base for categories
+        if not fpath.exists():
+            continue
+        with open(fpath) as f:
+            entries = json.load(f)
+        for e in entries:
+            key = (e["problem_id"], int(e["pair"]))
+            if key not in cat_map:
+                cat_map[key] = e.get("bug_category", "")
+
+    for cat in CATEGORIES:
+        candidates = []
+        for (pid, pair_num), pt_results in lookup.items():
+            # Ensure we have zero_shot results for all 5 models as a baseline
+            if "zero_shot" in pt_results and len(pt_results["zero_shot"]) == len(FILES):
+                if cat_map.get((pid, pair_num)) == cat:
+                    candidates.append((pid, pair_num, pt_results))
+
+        if not candidates:
             print(f"  WARNING: no complete-coverage pair for {cat}")
             continue
 
-        # Score by interest: number of distinct verdicts (ideally both BUG_EXPOSED + NOT_EXPOSED)
+        # Score by interest: number of distinct verdicts in zero_shot
         def score(item):
-            _, _, mr = item
+            _, _, pt_res = item
+            mr = pt_res.get("zero_shot", {})
             verdicts = set(v["verdict"] for v in mr.values())
             exposed = sum(1 for v in mr.values() if v["verdict"] == "BUG_EXPOSED")
-            # Prefer mix: 2-3 exposed out of 5 gives score 5, all exposed/none exposed gives 1
             mix_score = min(exposed, 5 - exposed)  # 0..2
             variety = len(verdicts)  # 1 or 2+
             return (mix_score * 10) + variety
 
-        cat_candidates.sort(key=score, reverse=True)
-        pid, pair_num, model_results = cat_candidates[0]
+        candidates.sort(key=score, reverse=True)
+        pid, pair_num, pt_results = candidates[0]
 
         # Extract code from zip
         zinfo = zip_map.get(pid)
@@ -241,7 +222,6 @@ def build_demo_pairs():
             with zipfile.ZipFile(zpath) as zf:
                 names = zf.namelist()
                 prefix = None
-                # find the folder matching pair_num
                 for n in names:
                     if f"pair{pair_num}/" in n and "metadata.json" in n:
                         prefix = n.replace("metadata.json", "")
@@ -261,20 +241,8 @@ def build_demo_pairs():
                                 raw = zf.read(n).decode("utf-8", errors="replace")
                                 problem_intro = raw[:1000]
 
-        # Get bug description from dataset (use any model's result entry)
+        # Get bug description from metadata
         bug_desc = ""
-        for model_name, fpath in ZS_FILES.items():
-            if not fpath.exists():
-                continue
-            with open(fpath) as f:
-                entries = json.load(f)
-            for e in entries:
-                if e["problem_id"] == pid and int(e["pair"]) == pair_num:
-                    break
-            # Also look in metadata from zip
-        # Get from cat_map direction — try dataset.json approach via zip meta
-        # We already read it above as part of code extraction, but bug_description
-        # is in metadata.json; re-read it here
         if zinfo:
             _, zpath = zinfo
             with zipfile.ZipFile(zpath) as zf:
@@ -296,11 +264,13 @@ def build_demo_pairs():
             "problem_intro": problem_intro,
             "buggy_code":    buggy_code,
             "correct_code":  correct_code,
-            "results":       model_results,
+            "results":       pt_results,
         }
         demo_pairs.append(entry)
-        exposed_count = sum(1 for v in model_results.values() if v["verdict"] == "BUG_EXPOSED")
-        print(f"  {cat} → {pid} pair{pair_num}  ({exposed_count}/5 models exposed)")
+        # Count exposed in zero_shot for reporting
+        zs_results = pt_results.get("zero_shot", {})
+        exposed_count = sum(1 for v in zs_results.values() if v["verdict"] == "BUG_EXPOSED")
+        print(f"  {cat} → {pid} pair{pair_num}  ({exposed_count}/5 models exposed in zero_shot)")
 
     with open(OUT_DIR / "demo_pairs.json", "w") as f:
         json.dump(demo_pairs, f, separators=(",", ":"))
