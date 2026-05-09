@@ -135,6 +135,8 @@ See [`chrome-extension/README.md`](chrome-extension/README.md) for usage details
 
 An interactive single-page app with results dashboard, dataset browser, and evaluation replay.
 
+**Live Demo:** [algo-bugs-benchmark.vercel.app](https://algo-bugs-benchmark.vercel.app/)
+
 **Run locally:**
 ```bash
 cd web-showcase
