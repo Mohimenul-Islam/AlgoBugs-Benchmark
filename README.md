@@ -138,7 +138,7 @@ An interactive single-page app with results dashboard, dataset browser, and eval
 **Live Demo:** [mohimenul-islam.github.io/AlgoBugs-Benchmark](https://mohimenul-islam.github.io/AlgoBugs-Benchmark/) · [Vercel Mirror](https://algo-bugs-benchmark.vercel.app/)
 
 ***Slide URL***
-https://shorturl.at/3nUK0
+http://Shorturl.at/RmISu
 
 **Run locally:**
 ```bash
