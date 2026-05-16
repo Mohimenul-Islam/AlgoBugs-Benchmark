@@ -745,8 +745,8 @@ Constraints:
   Diagnostic Benchmark for LLM Fault-Exposure on Competitive Programming Bugs<br>
   <span style="opacity:0.6;margin-top:10px;display:block">BSc CSE Final Year Design Project · Daffodil International University · Mohimenul Islam · May 2026</span>
   <div class="footer-links">
-    <a href="https://github.com/Mohimenul" target="_blank">GitHub Repository</a>
-    <a href="report.pdf" target="_blank">Thesis Report PDF</a>
+    <a href="https://github.com/Mohimenul-Islam/AlgoBugs-Benchmark" target="_blank">GitHub Repository</a>
+    <a href="https://github.com/Mohimenul-Islam/AlgoBugs-Benchmark/blob/main/report/FYDP_Report.pdf" target="_blank">Thesis Report PDF</a>
   </div>
 </footer>
 """
@@ -1362,6 +1362,8 @@ window.onload=loadData;
 </html>
 """
 
-with open('/home/mohimenul/report-finalise/Algobugs-Benchmark/web-showcase/index.html', 'w') as f:
+import os
+OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
+with open(OUT_PATH, 'w') as f:
     f.write(html_head)
     f.write(html_script)

@@ -137,8 +137,7 @@ An interactive single-page app with results dashboard, dataset browser, and eval
 
 **Live Demo:** [mohimenul-islam.github.io/AlgoBugs-Benchmark](https://mohimenul-islam.github.io/AlgoBugs-Benchmark/) · [Vercel Mirror](https://algo-bugs-benchmark.vercel.app/)
 
-***Slide URL***
-http://Shorturl.at/RmISu
+**Defense Slides:** [shorturl.at/RmISu](https://shorturl.at/RmISu)
 
 **Run locally:**
 ```bash
@@ -163,4 +162,4 @@ LaTeX source is in [`report/source/`](report/source/).
 
 ## License
 
-Dataset and code released for academic use. All Codeforces submissions were publicly accessible at the time of collection (post-contest period). No personally identifiable information is retained.
+Released under the [MIT License](LICENSE). All Codeforces submissions were publicly accessible at the time of collection (post-contest period). No personally identifiable information is retained.
